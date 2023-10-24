@@ -1,5 +1,4 @@
-# COMPILER?=nvcc
-COMPILER?=/usr/local/cuda-12.2/bin/nvcc -O3 -ccbin /home/lukasm/miniconda3/envs/gcc-test/bin/g++
+COMPILER?=nvcc
 OPT_FLAGS?=-O3
 
 default: clean compile run

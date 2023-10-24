@@ -59,4 +59,35 @@ int gpuAssert(cudaError_t code) {
   }
   return 0;
 }
+
+void initArray(int32_t* arr, const uint32_t N, const int32_t R) {
+    const uint32_t M = 2*R+1;
+    for (uint32_t i = 0; i < N; i++) {
+        arr[i] = (rand() % M) - R;
+    }
+}
+
+void printArray(const int32_t* arr, const uint32_t N) {
+    for (u_int32_t i = 0; i < N; i++) {
+        printf("%d, ", arr[i]);
+    }
+    printf("\n");
+}
+
+void seqIncScan(const int32_t* h_in, int32_t* h_out, const uint32_t N) {
+    h_out[0] = h_in[0];
+    for (u_int32_t i = 1; i < N; i++) {
+        h_out[i] = h_out[i-1] + h_in[i];
+    }
+}
+
+void validate(const int32_t* ref_arr, const int32_t* arr, const uint32_t N) {
+    for(uint32_t i = 0; i<N; i++) {
+        if(ref_arr[i] != arr[i]) {
+            printf("!!!INVALID!!!: at index %d, ref_arr: %d, arr: %d\n", i, ref_arr[i], arr[i]);
+            exit(1);
+        }
+    }
+    printf("VALID result!\n\n");
+}
 #endif // UTILS

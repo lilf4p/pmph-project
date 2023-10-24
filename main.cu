@@ -6,14 +6,6 @@
 #include "kernels.cu"
 #include "utils.cu"
 
-// initialize a random array of size N
-void initArray(int32_t* inp_arr, const uint32_t N, const int R) {
-    const uint32_t M = 2*R+1;
-    for(uint32_t i=0; i<N; i++) {
-        inp_arr[i] = (rand() % M) - R;
-    }
-}
-
 // Measure a more-realistic optimal bandwidth by a simple, memcpy-like kernel 
 int bandwidthMemcpy( const uint32_t B     // desired CUDA block size ( <= 1024, multiple of 32)
                    , const size_t   N     // length of the input array

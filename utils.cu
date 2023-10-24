@@ -1,3 +1,6 @@
+#ifndef UTILS
+#define UTILS
+
 #include <sys/time.h>
 #include <time.h> 
 
@@ -56,3 +59,4 @@ int gpuAssert(cudaError_t code) {
   }
   return 0;
 }
+#endif // UTILS

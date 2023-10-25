@@ -84,8 +84,8 @@ copyFromShr2GlbMem( const uint32_t glb_offs
 
 // Scan in warp, used at block-level
 template<class OP>
-__device__ inline typename OP::RedElTp
-scanIncWarp( volatile typename OP::RedElTp* ptr, const unsigned int idx ) {
+__device__ inline typename OP::ElTp
+scanIncWarp( volatile typename OP::ElTp* ptr, const unsigned int idx ) {
     const unsigned int lane = idx & (WARP-1);
     
     #pragma unroll
@@ -99,20 +99,20 @@ scanIncWarp( volatile typename OP::RedElTp* ptr, const unsigned int idx ) {
 
 // Scan at block-level
 template<class OP>
-__device__ inline typename OP::RedElTp
-scanIncBlock(volatile typename OP::RedElTp* ptr, const unsigned int idx) {
+__device__ inline typename OP::ElTp
+scanIncBlock(volatile typename OP::ElTp* ptr, const unsigned int idx) {
     const unsigned int lane   = idx & (WARP-1); // index of thread in warp (0..31)
     const unsigned int warpid = idx >> lgWARP; // warp index in block
 
     // 1. perform scan at warp level
-    typename OP::RedElTp res = scanIncWarp<OP>(ptr,idx);
+    typename OP::ElTp res = scanIncWarp<OP>(ptr,idx);
     __syncthreads(); 
 
     // 2. place the end-of-warp results in
     //   the first warp. This works because
     //   warp size = 32, and 
     //   max block size = 32^2 = 1024
-    typename OP::RedElTp tmp = OP::remVolatile(ptr[idx]); 
+    typename OP::ElTp tmp = OP::remVolatile(ptr[idx]); 
     __syncthreads();
     if (lane == (WARP-1)) { 
         ptr[warpid] = tmp;
@@ -174,11 +174,11 @@ scan3rdKernel ( typename OP::ElTp* d_out
 ) {
     extern __shared__ char sh_mem[];
     // shared memory for the input elements (types)
-    volatile typename OP::ElTp* shmem_inp = (typename OP::InpElTp*)sh_mem;
+    volatile typename OP::ElTp* shmem_inp = (typename OP::ElTp*)sh_mem;
 
     // shared memory for the reduce-element type; it overlaps with the
     //   `shmem_inp` since they are not going to be used in the same time.
-    volatile typename OP::ElTp* shmem_red = (typename OP::RedElTp*)sh_mem;
+    volatile typename OP::ElTp* shmem_red = (typename OP::ElTp*)sh_mem;
 
     // number of elements to be processed by each block
     uint32_t num_elems_per_block = CHUNK * blockDim.x;

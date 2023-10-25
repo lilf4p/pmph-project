@@ -152,7 +152,7 @@ spScanKernel ( typename OP::ElTp* d_out
              , volatile typename OP::ElTp* prefixes
              , volatile uint8_t* flags // <- initialize all elements with INC flag
              , volatile uint32_t* dyn_block_id
-             , size_t N
+             , uint32_t N
 ) {
     typedef typename OP::ElTp ElTp;
 

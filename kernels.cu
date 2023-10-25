@@ -133,32 +133,15 @@ scanIncBlock(volatile typename OP::ElTp* ptr, const unsigned int idx) {
 
 // ---------------------------------------------- //
 
-//-----------SCAN KERNEL----------//
+//----------- SINGLE PASS SCAN KERNEL----------//
 // From the weekly assignment 2 kernel scan3rdKernel, modify it to do the scan
 // in a single kernel.
-
 /**
- * This kernel assumes that the generic-associative binary operator
- *   `OP` is NOT-necessarily commutative. It implements the third
- *   stage of the scan (parallel prefix sum), which scans within
- *   a block.  (The first stage is a per block reduction with the
- *   `redAssocKernel` kernel, and the second one is the `scan1Block`
- *    kernel that scans the reduced elements of each CUDA block.)
- *
  * `N` is the length of the input array
  * `CHUNK` (the template parameter) is the number of elements to
  *    be processed sequentially by a thread in one go.
  * `d_out` is the result array of length `N`
  * `d_in`  is the input  array of length `N`
- * `d_tmp` is the array holding the per-block scanned results.
- *         it has number-of-CUDA-blocks elements, i.e., element
- *         `d_tmp[i-1]` is the scanned prefix that needs to be
- *         accumulated to each of the scanned elements corresponding
- *         to block `i`.
- * This kernels scans the elements corresponding to the current block
- *   `i`---in number of num_seq_chunks*CHUNK*blockDim.x---and then it
- *   accumulates to each of them the prefix of the previous block `i-1`,
- *   which is stored in `d_tmp[i-1]`.
  */
 
 __device__ uint32_t dyn_block_id = 0; // dyn block id
@@ -172,6 +155,9 @@ scan3rdKernel ( typename OP::ElTp* d_out
               , char* flags
               , uint32_t N 
 ) {
+
+    //TODO: Implement the single pass algorithm 
+
     extern __shared__ char sh_mem[];
     // shared memory for the input elements (types)
     volatile typename OP::ElTp* shmem_inp = (typename OP::ElTp*)sh_mem;
@@ -204,54 +190,54 @@ scan3rdKernel ( typename OP::ElTp* d_out
     // 2. each thread sequentially scans its `CHUNK` elements
     //    and stores the result in the `chunk` array. The reduced
     //    result is stored in `tmp`.
-    typename OP::ElTp tmp = OP::identity();
-    uint32_t shmem_offset = threadIdx.x * CHUNK;
-    #pragma unroll
-    for (uint32_t i = 0; i < CHUNK; i++) {
-        typename OP::ElTp elm = shmem_inp[shmem_offset + i];
-        typename OP::ElTp red = OP::mapFun(elm);
-        tmp = OP::apply(tmp, red);
-        chunk[i] = tmp;
-    }
-    __syncthreads();
+    //typename OP::ElTp tmp = OP::identity();
+    //uint32_t shmem_offset = threadIdx.x * CHUNK;
+    //#pragma unroll
+    //for (uint32_t i = 0; i < CHUNK; i++) {
+    //    typename OP::ElTp elm = shmem_inp[shmem_offset + i];
+    //    typename OP::ElTp red = OP::mapFun(elm);
+    //    tmp = OP::apply(tmp, red);
+    //    chunk[i] = tmp;
+    //}
+    //__syncthreads();
 
     // 3. Each thread publishes in shared memory the reduced result of its
     //    `CHUNK` elements 
-    shmem_red[threadIdx.x] = tmp;
-    __syncthreads();
+    //shmem_red[threadIdx.x] = tmp;
+    //__syncthreads();
 
     // 4. perform an intra-CUDA-block scan 
-    tmp = scanIncBlock<OP>(shmem_red, threadIdx.x);
-    __syncthreads();
+    //tmp = scanIncBlock<OP>(shmem_red, threadIdx.x);
+    //__syncthreads();
 
     // 5. write the scan result back to shared memory
-    shmem_red[threadIdx.x] = tmp;
-    __syncthreads();
+    //shmem_red[threadIdx.x] = tmp;
+    //__syncthreads();
 
     // 6. the previous element is read from shared memory in `tmp`: 
     //       it is the prefix of the previous threads in the current block.
-    tmp   = OP::identity();
-    if (threadIdx.x > 0) 
-        tmp = OP::remVolatile(shmem_red[threadIdx.x-1]);
+    //tmp   = OP::identity();
+    //if (threadIdx.x > 0) 
+    //    tmp = OP::remVolatile(shmem_red[threadIdx.x-1]);
 
     // 7. the prefix of the previous blocks (and iterations) is hold
     //    in `accum` and is accumulated to `tmp`, which now holds the
     //    global prefix for the `CHUNK` elements processed by the current thread.
-    tmp   = OP::apply(accum, tmp);
+    //tmp   = OP::apply(accum, tmp);
 
     // 8. `accum` is also updated with the reduced result of the current
     //    iteration, i.e., of the last thread in the block: `shmem_red[blockDim.x-1]`
-    accum = OP::apply(accum, shmem_red[blockDim.x-1]);
-    __syncthreads();
+    //accum = OP::apply(accum, shmem_red[blockDim.x-1]);
+    //__syncthreads();
 
     // 9. the `tmp` prefix is accumulated to all the `CHUNK` elements
     //      locally processed by the current thread (i.e., the ones
     //      in `chunk` array hold in registers).
-    #pragma unroll
-    for (uint32_t i = 0; i < CHUNK; i++) {
-        shmem_red[threadIdx.x*CHUNK + i] = OP::apply(tmp, chunk[i]);
-    }
-    __syncthreads();
+    //#pragma unroll
+    //for (uint32_t i = 0; i < CHUNK; i++) {
+    //    shmem_red[threadIdx.x*CHUNK + i] = OP::apply(tmp, chunk[i]);
+    //}
+    //__syncthreads();
 
     // 10. write back from shared to global memory in coalesced fashion.
     // TODO: change this (seq is undefined)

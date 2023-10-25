@@ -107,7 +107,6 @@ int spScanIncAddI32( const uint32_t B     // desired CUDA block size ( <= 1024, 
 
     free(h_out);
     free(h_ref);
-    cudaFree(d_tmp);
 
     return 0;
 }

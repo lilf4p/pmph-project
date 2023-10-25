@@ -144,7 +144,7 @@ scanIncBlock(volatile typename OP::ElTp* ptr, const unsigned int idx) {
  * `d_in`  is the input  array of length `N`
  */
 
-template<class OP, uint8_t CHUNK>
+template<class OP, uint8_t CHUNK, uint32_t BLOCK>
 __global__ void
 spScanKernel ( typename OP::ElTp* d_out
              , typename OP::ElTp* d_in
@@ -153,7 +153,6 @@ spScanKernel ( typename OP::ElTp* d_out
              , volatile uint8_t* flags // <- initialize all elements with INC flag
              , volatile uint32_t* dyn_block_id
              , size_t N
-             , uint32_t BLOCK
 ) {
     typedef typename OP::ElTp ElTp;
 

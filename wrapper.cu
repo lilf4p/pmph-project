@@ -28,7 +28,7 @@ void log2UB(uint32_t n, uint32_t* ub, uint32_t* lg) {
  * Implementation consist of one phase
  */
 template<class OP>                     // element-type and associative operator properties
-void scanInc( uint32_t     B     // desired CUDA block size ( <= 1024, multiple of 32)
+void scanInc( const uint32_t     B     // desired CUDA block size ( <= 1024, multiple of 32)
             , const size_t       N     // length of the input array
             , typename OP::ElTp* d_out
             , typename OP::ElTp* d_in
@@ -53,7 +53,7 @@ void scanInc( uint32_t     B     // desired CUDA block size ( <= 1024, multiple 
     cudaMemset(prefixes, INC, num_blocks);
     cudaMemset(dyn_block_id, 0, 1);
 
-    spScanKernel<OP, CHUNK><<<num_blocks, B>>>(d_out, d_in, aggregates, prefixes, flags, dyn_block_id, N, B);
+    spScanKernel<OP, CHUNK, B><<<num_blocks, B>>>(d_out, d_in, aggregates, prefixes, flags, dyn_block_id, N);
 }
 
 #endif

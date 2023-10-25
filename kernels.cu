@@ -1,4 +1,9 @@
+#ifndef KERNELS
+#define KERNELS
+
 #include <cuda_runtime.h>
+
+#include "utils.cu"
 
 // ------ TYPES AND OPERATORS ------- //
 
@@ -163,10 +168,9 @@ scan3rdKernel ( typename OP::RedElTp* d_out
               , typename OP::InpElTp* d_in
               , typename OP::RedElTp* aggregs
               , typename OP::RedElTp* prefs
-              , uint8_t* flags
+              , char* flags
               , uint32_t N 
-              ) {
-
+) {
     extern __shared__ char sh_mem[];
     // shared memory for the input elements (types)
     volatile typename OP::InpElTp* shmem_inp = (typename OP::InpElTp*)sh_mem;
@@ -183,7 +187,10 @@ scan3rdKernel ( typename OP::RedElTp* d_out
 
     // accumulator updated at each iteration of the "virtualization"
     //   loop so we remember the prefix for the current elements.
-    typename OP::RedElTp accum = (blockIdx.x == 0) ? OP::identity() : d_tmp[blockIdx.x-1];
+
+    // TODO: change this (d_tmp is undefined)
+    // typename OP::RedElTp accum = (blockIdx.x == 0) ? OP::identity() : d_tmp[blockIdx.x-1];
+    typename OP::RedElTp accum = (blockIdx.x == 0) ? OP::identity() : 0;
 
     // register memory for storing the scanned elements.
     typename OP::RedElTp chunk[CHUNK];
@@ -246,8 +253,8 @@ scan3rdKernel ( typename OP::RedElTp* d_out
     __syncthreads();
 
     // 10. write back from shared to global memory in coalesced fashion.
-    copyFromShr2GlbMem<typename OP::RedElTp, CHUNK>
-              (inp_block_offs+seq, N, d_out, shmem_red);
-            
-    
+    // TODO: change this (seq is undefined)
+    // copyFromShr2GlbMem<typename OP::RedElTp, CHUNK>(inp_block_offs+seq, N, d_out, shmem_red);
+    copyFromShr2GlbMem<typename OP::RedElTp, CHUNK>(inp_block_offs+0, N, d_out, shmem_red);
 }
+#endif // KERNELS

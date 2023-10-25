@@ -42,3 +42,5 @@ void scanInc( const uint32_t     B     // desired CUDA block size ( <= 1024, mul
 
     scan3rdKernel<OP, CHUNK><<< num_blocks, B, shmem_size >>>(d_out, d_in, aggregs, prefs, flags, N);
 }
+
+#endif

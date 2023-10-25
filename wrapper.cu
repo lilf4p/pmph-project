@@ -34,20 +34,26 @@ void scanInc( const uint32_t     B     // desired CUDA block size ( <= 1024, mul
             , typename OP::ElTp* d_in
             ){
 
-    const uint32_t CHUNK = ELEMS_PER_THREAD;
+    // const uint32_t CHUNK = ELEMS_PER_THREAD*4 / sizeof(typename OP::ElTp);
+    const uint32_t CHUNK = 12;
+
     const uint32_t num_blocks = (N + B - 1) / B;
     const size_t   shmem_size = B * sizeof(typename OP::ElTp) * CHUNK;
 
-    typename OP::ElTp* aggregs;
-    typename OP::ElTp* prefs;
-    char* flags;
+    typename OP::ElTp* aggregates;
+    typename OP::ElTp* prefixes;
+    uint8_t* flags;
+    uint32_t* dyn_block_id;
 
-    cudaMalloc((void**)&aggregs, num_blocks*sizeof( typename OP::ElTp));
-    cudaMalloc((void**)&prefs, num_blocks*sizeof( typename OP::ElTp));
-    cudaMalloc((void**)&flags, num_blocks*sizeof( char ));
+    cudaMalloc((void**)&aggregates, num_blocks*sizeof( typename OP::ElTp));
+    cudaMalloc((void**)&prefixes, num_blocks*sizeof( typename OP::ElTp));
+    cudaMalloc((void**)&flags, num_blocks*sizeof( uint8_t ));
+    cudaMalloc((void**)&dyn_block_id, sizeof( uint32_t ));
 
+    cudaMemset(prefixes, INC, num_blocks);
+    cudaMemset(dyn_block_id, 0, 1);
 
-    scan3rdKernel<OP, CHUNK><<< num_blocks, B, shmem_size >>>(d_out, d_in, aggregs, prefs, flags, N);
+    spScanKernel<OP, CHUNK, B><<<num_blocks, B>>>(d_out, d_in, aggregates, prefixes, flags, N);
 }
 
 #endif

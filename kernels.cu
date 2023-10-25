@@ -144,104 +144,70 @@ scanIncBlock(volatile typename OP::ElTp* ptr, const unsigned int idx) {
  * `d_in`  is the input  array of length `N`
  */
 
-__device__ uint32_t dyn_block_id = 0; // dyn block id
-
-template<class OP, int CHUNK>
+template<class OP, uint8_t CHUNK, uint32_t BLOCK>
 __global__ void
-scan3rdKernel ( typename OP::ElTp* d_out
-              , typename OP::ElTp* d_in
-              , typename OP::ElTp* aggregs
-              , typename OP::ElTp* prefs
-              , char* flags
-              , uint32_t N 
+spScanKernel ( typename OP::ElTp* d_out
+             , typename OP::ElTp* d_in
+             , volatile typename OP::ElTp* aggregates
+             , volatile typename OP::ElTp* prefixes
+             , volatile uint8_t* flags // <- initialize all elements with INC flag
+             , volatile uint32_t* dyn_block_id
+             , uint32_t N
 ) {
+    typedef typename OP::ElTp ElTp;
 
-    //TODO: Implement the single pass algorithm 
+    __shared__ ElTp shmem_inp[CHUNK * BLOCK];
+    __shared__ ElTp shmem_red[BLOCK];
 
-    extern __shared__ char sh_mem[];
-    // shared memory for the input elements (types)
-    volatile typename OP::ElTp* shmem_inp = (typename OP::ElTp*)sh_mem;
+    __shared__ uint32_t tmp_block_id; // <- is volatile needed here?
+    if (threadIdx.x == BLOCK - 1) {
+        tmp_block_id = atomicAdd(dyn_block_id, 1);
+    }
+    __syncthreads();
 
-    // shared memory for the reduce-element type; it overlaps with the
-    //   `shmem_inp` since they are not going to be used in the same time.
-    volatile typename OP::ElTp* shmem_red = (typename OP::ElTp*)sh_mem;
-
-    // number of elements to be processed by each block
-    uint32_t num_elems_per_block = CHUNK * blockDim.x;
-
-    // the current block start processing input elements from this offset:
-    uint32_t inp_block_offs = num_elems_per_block * blockIdx.x;
-
-    // accumulator updated at each iteration of the "virtualization"
-    //   loop so we remember the prefix for the current elements.
-
-    // TODO: change this (d_tmp is undefined)
-    // typename OP::RedElTp accum = (blockIdx.x == 0) ? OP::identity() : d_tmp[blockIdx.x-1];
-    //typename OP::ElTp accum = (blockIdx.x == 0) ? OP::identity() : 0;
+    uint32_t thread_id = threadIdx.x;
+    uint32_t block_id = tmp_block_id;
+    uint32_t block_offset = CHUNK * BLOCK * block_id;
 
     // register memory for storing the scanned elements.
-    //typename OP::ElTp chunk[CHUNK];
+    ElTp chunk[CHUNK];
 
-    // 1. copy `CHUNK` input elements per thread from global to shared memory
-    //    in coalesced fashion (for global memory)
-    copyFromGlb2ShrMem<typename OP::ElTp, CHUNK>
-            (inp_block_offs, N, OP::identInp(), d_in, shmem_inp);
+    // // 1. copy `CHUNK` input elements per thread from global to shared memory
+    copyFromGlb2ShrMem<ElTp, CHUNK>(block_offset, N, OP::identInp(), d_in, shmem_inp);
 
-    // 2. each thread sequentially scans its `CHUNK` elements
-    //    and stores the result in the `chunk` array. The reduced
-    //    result is stored in `tmp`.
-    //typename OP::ElTp tmp = OP::identity();
-    //uint32_t shmem_offset = threadIdx.x * CHUNK;
-    //#pragma unroll
-    //for (uint32_t i = 0; i < CHUNK; i++) {
-    //    typename OP::ElTp elm = shmem_inp[shmem_offset + i];
-    //    typename OP::ElTp red = OP::mapFun(elm);
-    //    tmp = OP::apply(tmp, red);
-    //    chunk[i] = tmp;
-    //}
-    //__syncthreads();
+    // // 2. each thread sequentially reduces its `CHUNK` elements, result is stored in `tmp`
+    ElTp tmp = OP::identity();
+    uint32_t shmem_offset = thread_id * CHUNK;
+    #pragma unroll
+    for (uint8_t i = 0; i < CHUNK; i++) {
+        ElTp elm = shmem_inp[shmem_offset + i];
+        tmp = OP::apply(tmp, elm);
+        chunk[i] = tmp;
+    }
+    __syncthreads();
 
-    // 3. Each thread publishes in shared memory the reduced result of its
-    //    `CHUNK` elements 
-    //shmem_red[threadIdx.x] = tmp;
-    //__syncthreads();
+    // 3. Each thread publishes in shared memory the reduced result of its `CHUNK` elements 
+    shmem_red[threadIdx.x] = tmp;
+    __syncthreads();
 
     // 4. perform an intra-CUDA-block scan 
-    //tmp = scanIncBlock<OP>(shmem_red, threadIdx.x);
-    //__syncthreads();
+    ElTp agg = scanIncBlock<OP>(shmem_red, thread_id);
+    __syncthreads();
+    if (thread_id == BLOCK-1) {
+        if (block_id > 0) {
+            aggregates[block_id] = agg;
+            __threadfence(); // <- which thread fence to use?
+            flags[block_id] = AGG;
+        } else {
+             prefixes[block_id] = agg;
+            __threadfence(); // <- which thread fence to use?
+            flags[block_id] = PRE;
+        }
+    }
+    __syncthreads();
 
-    // 5. write the scan result back to shared memory
-    //shmem_red[threadIdx.x] = tmp;
-    //__syncthreads();
-
-    // 6. the previous element is read from shared memory in `tmp`: 
-    //       it is the prefix of the previous threads in the current block.
-    //tmp   = OP::identity();
-    //if (threadIdx.x > 0) 
-    //    tmp = OP::remVolatile(shmem_red[threadIdx.x-1]);
-
-    // 7. the prefix of the previous blocks (and iterations) is hold
-    //    in `accum` and is accumulated to `tmp`, which now holds the
-    //    global prefix for the `CHUNK` elements processed by the current thread.
-    //tmp   = OP::apply(accum, tmp);
-
-    // 8. `accum` is also updated with the reduced result of the current
-    //    iteration, i.e., of the last thread in the block: `shmem_red[blockDim.x-1]`
-    //accum = OP::apply(accum, shmem_red[blockDim.x-1]);
-    //__syncthreads();
-
-    // 9. the `tmp` prefix is accumulated to all the `CHUNK` elements
-    //      locally processed by the current thread (i.e., the ones
-    //      in `chunk` array hold in registers).
-    //#pragma unroll
-    //for (uint32_t i = 0; i < CHUNK; i++) {
-    //    shmem_red[threadIdx.x*CHUNK + i] = OP::apply(tmp, chunk[i]);
-    //}
-    //__syncthreads();
-
-    // 10. write back from shared to global memory in coalesced fashion.
-    // TODO: change this (seq is undefined)
-    // copyFromShr2GlbMem<typename OP::RedElTp, CHUNK>(inp_block_offs+seq, N, d_out, shmem_red);
-    copyFromShr2GlbMem<typename OP::ElTp, CHUNK>(inp_block_offs+0, N, d_out, shmem_red);
+    // 5. write back from shared to global memory in coalesced fashion.
+    copyFromShr2GlbMem<ElTp, CHUNK>(block_offset, N, d_out, shmem_inp);
 }
+
 #endif // KERNELS

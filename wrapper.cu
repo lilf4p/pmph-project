@@ -32,13 +32,21 @@ void scanInc( const uint32_t     B     // desired CUDA block size ( <= 1024, mul
             , const size_t       N     // length of the input array
             , typename OP::ElTp* d_out
             , typename OP::ElTp* d_in
-            , typename OP::ElTp* aggregs
-            , typename OP::ElTp* prefs ){
+            ){
 
     const uint32_t CHUNK = ELEMS_PER_THREAD*4 / sizeof(typename OP::ElTp);
     uint32_t num_seq_chunks;
     const uint32_t num_blocks = (N + B - 1) / B;
     const size_t   shmem_size = B * sizeof(typename OP::ElTp) * CHUNK;
+
+    typename OP::ElTp* aggregs;
+    typename OP::ElTp* prefs;
+    char* flags;
+
+    cudaMalloc((void**)&aggregs, num_blocks*sizeof( typename OP::ElTp));
+    cudaMalloc((void**)&prefs, num_blocks*sizeof( typename OP::ElTp));
+    cudaMalloc((void**)&flags, num_blocks*sizeof( char ));
+
 
     scan3rdKernel<OP, CHUNK><<< num_blocks, B, shmem_size >>>(d_out, d_in, aggregs, prefs, flags, N);
 }

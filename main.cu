@@ -50,14 +50,12 @@ int spScanIncAddI32( const uint32_t B     // desired CUDA block size ( <= 1024, 
 ) {
 
     const size_t mem_size = N * sizeof(int);
-    int* d_tmp;
     int* h_out = (int*)malloc(mem_size);
     int* h_ref = (int*)malloc(mem_size);
-    cudaMalloc((void**)&d_tmp, MAX_BLOCK*sizeof(int));
     cudaMemset(d_out, 0, N*sizeof(int));
 
     // dry run to exercise d_tmp allocation
-    scanInc< Add<int> > ( B, N, d_out, d_in, d_tmp );
+    scanInc< Add<int> > ( B, N, d_out, d_in);
 
     // time the GPU computation
     unsigned long int elapsed;
@@ -65,7 +63,7 @@ int spScanIncAddI32( const uint32_t B     // desired CUDA block size ( <= 1024, 
     gettimeofday(&t_start, NULL); 
 
     for(int i=0; i<RUNS_GPU; i++) {
-        scanInc< Add<int> > ( B, N, d_out, d_in, d_tmp );
+        scanInc< Add<int> > ( B, N, d_out, d_in );
     }
     cudaDeviceSynchronize();
 

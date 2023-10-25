@@ -42,7 +42,7 @@ __global__ void naiveMemcpy(int* d_out, int* d_inp, const uint32_t N) {
     }
 }
 
-// coalesced mem copy glb to shr
+// coalesced mem copy glb to shr of CHUNK*B elems
 template<class T, uint32_t CHUNK>
 __device__ inline void
 copyFromGlb2ShrMem( const uint32_t glb_offs
@@ -62,7 +62,7 @@ copyFromGlb2ShrMem( const uint32_t glb_offs
     __syncthreads(); 
 }
 
-// coalesced mem copy shr to glb 
+// coalesced mem copy shr to glb of CHUNK*B elems
 template<class T, uint32_t CHUNK>
 __device__ inline void
 copyFromShr2GlbMem( const uint32_t glb_offs

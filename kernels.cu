@@ -15,9 +15,10 @@
 template<class T>
 class Add {
   public:
-    typedef T InpElTp;
-    typedef T RedElTp;
-    static const bool commutative = true;
+    // Use only one type
+    //typedef T InpElTp;
+    //typedef T RedElTp;
+    typedef T ElTp;
     static __device__ __host__ inline T identInp()                    { return (T)0;    }
     static __device__ __host__ inline T mapFun(const T& el)           { return el;      }
     static __device__ __host__ inline T identity()                    { return (T)0;    }
@@ -164,20 +165,20 @@ __device__ uint32_t dyn_block_id = 0; // dyn block id
 
 template<class OP, int CHUNK>
 __global__ void
-scan3rdKernel ( typename OP::RedElTp* d_out
-              , typename OP::InpElTp* d_in
-              , typename OP::RedElTp* aggregs
-              , typename OP::RedElTp* prefs
+scan3rdKernel ( typename OP::ElTp* d_out
+              , typename OP::ElTp* d_in
+              , typename OP::ElTp* aggregs
+              , typename OP::ElTp* prefs
               , char* flags
               , uint32_t N 
 ) {
     extern __shared__ char sh_mem[];
     // shared memory for the input elements (types)
-    volatile typename OP::InpElTp* shmem_inp = (typename OP::InpElTp*)sh_mem;
+    volatile typename OP::ElTp* shmem_inp = (typename OP::InpElTp*)sh_mem;
 
     // shared memory for the reduce-element type; it overlaps with the
     //   `shmem_inp` since they are not going to be used in the same time.
-    volatile typename OP::RedElTp* shmem_red = (typename OP::RedElTp*)sh_mem;
+    volatile typename OP::ElTp* shmem_red = (typename OP::RedElTp*)sh_mem;
 
     // number of elements to be processed by each block
     uint32_t num_elems_per_block = CHUNK * blockDim.x;
@@ -190,14 +191,14 @@ scan3rdKernel ( typename OP::RedElTp* d_out
 
     // TODO: change this (d_tmp is undefined)
     // typename OP::RedElTp accum = (blockIdx.x == 0) ? OP::identity() : d_tmp[blockIdx.x-1];
-    typename OP::RedElTp accum = (blockIdx.x == 0) ? OP::identity() : 0;
+    typename OP::ElTp accum = (blockIdx.x == 0) ? OP::identity() : 0;
 
     // register memory for storing the scanned elements.
-    typename OP::RedElTp chunk[CHUNK];
+    typename OP::ElTp chunk[CHUNK];
 
     // 1. copy `CHUNK` input elements per thread from global to shared memory
     //    in coalesced fashion (for global memory)
-    copyFromGlb2ShrMem<typename OP::InpElTp, CHUNK>
+    copyFromGlb2ShrMem<typename OP::ElTp, CHUNK>
             (inp_block_offs, N, OP::identInp(), d_in, shmem_inp);
 
     // 2. each thread sequentially scans its `CHUNK` elements
@@ -207,8 +208,8 @@ scan3rdKernel ( typename OP::RedElTp* d_out
     uint32_t shmem_offset = threadIdx.x * CHUNK;
     #pragma unroll
     for (uint32_t i = 0; i < CHUNK; i++) {
-        typename OP::InpElTp elm = shmem_inp[shmem_offset + i];
-        typename OP::RedElTp red = OP::mapFun(elm);
+        typename OP::ElTp elm = shmem_inp[shmem_offset + i];
+        typename OP::ElTp red = OP::mapFun(elm);
         tmp = OP::apply(tmp, red);
         chunk[i] = tmp;
     }
@@ -255,6 +256,6 @@ scan3rdKernel ( typename OP::RedElTp* d_out
     // 10. write back from shared to global memory in coalesced fashion.
     // TODO: change this (seq is undefined)
     // copyFromShr2GlbMem<typename OP::RedElTp, CHUNK>(inp_block_offs+seq, N, d_out, shmem_red);
-    copyFromShr2GlbMem<typename OP::RedElTp, CHUNK>(inp_block_offs+0, N, d_out, shmem_red);
+    copyFromShr2GlbMem<typename OP::ElTp, CHUNK>(inp_block_offs+0, N, d_out, shmem_red);
 }
 #endif // KERNELS

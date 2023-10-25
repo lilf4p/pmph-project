@@ -5,6 +5,7 @@
 
 #include "kernels.cu"
 #include "utils.cu"
+#include "wrapper.cu"
 
 // Measure a more-realistic optimal bandwidth by a simple, memcpy-like kernel 
 int bandwidthMemcpy( const uint32_t B     // desired CUDA block size ( <= 1024, multiple of 32)
@@ -40,17 +41,81 @@ int bandwidthMemcpy( const uint32_t B     // desired CUDA block size ( <= 1024, 
     return 0;
 }
 
+// Function that benchmark and validate the single pass scan 
 int spScanIncAddI32( const uint32_t B     // desired CUDA block size ( <= 1024, multiple of 32)
                    , const size_t   N     // length of the input array
                    , int* h_in            // host input    of size: N * sizeof(int)
                    , int* d_in            // device input  of size: N * sizeof(ElTp)
                    , int* d_out           // device result of size: N * sizeof(int)
 ) {
-    // TODO: add validation + benchmarks
+
+    const size_t mem_size = N * sizeof(int);
+    int* d_tmp;
+    int* h_out = (int*)malloc(mem_size);
+    int* h_ref = (int*)malloc(mem_size);
+    cudaMalloc((void**)&d_tmp, MAX_BLOCK*sizeof(int));
+    cudaMemset(d_out, 0, N*sizeof(int));
+
+    // dry run to exercise d_tmp allocation
+    scanInc< Add<int> > ( B, N, d_out, d_in, d_tmp );
+
+    // time the GPU computation
+    unsigned long int elapsed;
+    struct timeval t_start, t_end, t_diff;
+    gettimeofday(&t_start, NULL); 
+
+    for(int i=0; i<RUNS_GPU; i++) {
+        scanInc< Add<int> > ( B, N, d_out, d_in, d_tmp );
+    }
+    cudaDeviceSynchronize();
+
+    gettimeofday(&t_end, NULL);
+    timeval_subtract(&t_diff, &t_end, &t_start);
+    elapsed = (t_diff.tv_sec*1e6+t_diff.tv_usec) / RUNS_GPU;
+    double gigaBytesPerSec = N  * (2*sizeof(int) + sizeof(int)) * 1.0e-3f / elapsed;
+    printf("Scan Inclusive AddI32 GPU Kernel runs in: %lu microsecs, GB/sec: %.2f\n"
+          , elapsed, gigaBytesPerSec);
+
+    gpuAssert( cudaPeekAtLastError() );
+
+    { // sequential computation
+        gettimeofday(&t_start, NULL);
+        for(int i=0; i<RUNS_CPU; i++) {
+            int acc = 0;
+            for(uint32_t i=0; i<N; i++) {
+                acc += h_in[i];
+                h_ref[i] = acc;
+            }
+        }
+        gettimeofday(&t_end, NULL);
+        timeval_subtract(&t_diff, &t_end, &t_start);
+        elapsed = (t_diff.tv_sec*1e6+t_diff.tv_usec) / RUNS_CPU;
+        double gigaBytesPerSec = N * (sizeof(int) + sizeof(int)) * 1.0e-3f / elapsed;
+        printf("Scan Inclusive AddI32 CPU Sequential runs in: %lu microsecs, GB/sec: %.2f\n"
+              , elapsed, gigaBytesPerSec);
+    }
+
+    { // Validation
+        cudaMemcpy(h_out, d_out, mem_size, cudaMemcpyDeviceToHost);
+        for(uint32_t i = 0; i<N; i++) {
+            if(h_out[i] != h_ref[i]) {
+                printf("!!!INVALID!!!: Scan Inclusive AddI32 at index %d, dev-val: %d, host-val: %d\n"
+                      , i, h_out[i], h_ref[i]);
+                exit(1);
+            }
+        }
+        printf("Scan Inclusive AddI32: VALID result!\n\n");
+    }
+
+    free(h_out);
+    free(h_ref);
+    cudaFree(d_tmp);
+
     return 0;
 }
 
 int main (int argc, char * argv[]) {
+
     if (argc != 3) {
         printf("Usage: %s <array-length> <block-size>\n", argv[0]);
         exit(1);

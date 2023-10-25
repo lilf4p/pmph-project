@@ -161,7 +161,7 @@ spScanKernel ( typename OP::ElTp* d_out
 
     __shared__ uint32_t tmp_block_id; // <- is volatile needed here?
     if (threadIdx.x == BLOCK - 1) {
-        tmp_block_id = atomicAdd(dyn_block_id, 1);
+        tmp_block_id = atomicAdd(&dyn_block_id, 1);
     }
     __syncthreads();
 

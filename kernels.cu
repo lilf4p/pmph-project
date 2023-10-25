@@ -204,7 +204,7 @@ scan3rdKernel ( typename OP::ElTp* d_out
     // 2. each thread sequentially scans its `CHUNK` elements
     //    and stores the result in the `chunk` array. The reduced
     //    result is stored in `tmp`.
-    typename OP::RedElTp tmp = OP::identity();
+    typename OP::ElTp tmp = OP::identity();
     uint32_t shmem_offset = threadIdx.x * CHUNK;
     #pragma unroll
     for (uint32_t i = 0; i < CHUNK; i++) {

@@ -53,7 +53,7 @@ void scanInc( const uint32_t     B     // desired CUDA block size ( <= 1024, mul
     cudaMemset(prefixes, INC, num_blocks);
     cudaMemset(dyn_block_id, 0, 1);
 
-    spScanKernel<OP, CHUNK, B><<<num_blocks, B>>>(d_out, d_in, aggregates, prefixes, flags, N);
+    spScanKernel<OP, CHUNK, B><<<num_blocks, B>>>(d_out, d_in, aggregates, prefixes, flags, dyn_block_id, N);
 }
 
 #endif

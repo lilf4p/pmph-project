@@ -6,6 +6,11 @@
 
 #define DEBUG_INFO  true
 
+// flag values
+#define INC 0 // nothing is available
+#define AGG 1 // aggregate is available
+#define PRE 2 // prefix is availabe
+
 #define lgWARP      5
 #define WARP        (1<<lgWARP)
 
@@ -19,6 +24,8 @@
 
 typedef unsigned int uint32_t;
 typedef int           int32_t;
+
+typedef unsigned char uint8_t;
 
 uint32_t MAX_HWDTH;
 uint32_t MAX_BLOCK;

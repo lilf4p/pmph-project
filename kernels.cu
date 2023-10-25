@@ -42,7 +42,7 @@ __global__ void naiveMemcpy(int* d_out, int* d_inp, const uint32_t N) {
     }
 }
 
-// coalesced mem copy glb to shr
+// coalesced mem copy glb to shr of CHUNK*B elems
 template<class T, uint32_t CHUNK>
 __device__ inline void
 copyFromGlb2ShrMem( const uint32_t glb_offs
@@ -62,7 +62,7 @@ copyFromGlb2ShrMem( const uint32_t glb_offs
     __syncthreads(); 
 }
 
-// coalesced mem copy shr to glb 
+// coalesced mem copy shr to glb of CHUNK*B elems
 template<class T, uint32_t CHUNK>
 __device__ inline void
 copyFromShr2GlbMem( const uint32_t glb_offs
@@ -177,10 +177,10 @@ scan3rdKernel ( typename OP::ElTp* d_out
 
     // TODO: change this (d_tmp is undefined)
     // typename OP::RedElTp accum = (blockIdx.x == 0) ? OP::identity() : d_tmp[blockIdx.x-1];
-    typename OP::ElTp accum = (blockIdx.x == 0) ? OP::identity() : 0;
+    //typename OP::ElTp accum = (blockIdx.x == 0) ? OP::identity() : 0;
 
     // register memory for storing the scanned elements.
-    typename OP::ElTp chunk[CHUNK];
+    //typename OP::ElTp chunk[CHUNK];
 
     // 1. copy `CHUNK` input elements per thread from global to shared memory
     //    in coalesced fashion (for global memory)

@@ -156,8 +156,9 @@ spScanKernel ( typename OP::ElTp* d_out
 ) {
     typedef typename OP::ElTp ElTp;
 
-    extern __shared__ ElTp shmem_inp[];
-    extern __shared__ ElTp shmem_red[];
+    extern __shared__ ElTp sh_mem[];
+    volatile ElTp* shmem_inp = (ElTp*)sh_mem; // CHUNK * BLOCK
+    volatile ElTp* shmem_red = (ElTp*)sh_mem; // BLOCK
 
     __shared__ uint32_t tmp_block_id; // <- is volatile needed here?
     if (threadIdx.x == blockDim.x - 1) {

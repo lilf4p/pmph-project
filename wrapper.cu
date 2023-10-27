@@ -33,10 +33,9 @@ void scanInc( const uint32_t     B     // desired CUDA block size ( <= 1024, mul
             , typename OP::ElTp* d_out
             , typename OP::ElTp* d_in
             ){
-
-    // const uint32_t CHUNK = ELEMS_PER_THREAD*4 / sizeof(typename OP::ElTp);
     const uint32_t CHUNK = 12;
-    const uint32_t num_blocks = (N + B - 1) / B;
+    const uint32_t num_blocks = (N/CHUNK + B - 1) / B;
+    printf("Number of blocks: %d \n", num_blocks);
     const size_t   shmem_size = B * sizeof(typename OP::ElTp) * CHUNK;
 
     typename OP::ElTp* aggregates;

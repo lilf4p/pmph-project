@@ -157,11 +157,11 @@ spScanKernel ( typename OP::ElTp* d_out
     typedef typename OP::ElTp ElTp;
 
     extern __shared__ ElTp sh_mem[];
-    volatile ElTp* shmem_inp = (ElTp*)sh_mem; // CHUNK * BLOCK
-    volatile ElTp* shmem_red = (ElTp*)sh_mem; // BLOCK
+    ElTp* shmem_inp = (ElTp*)sh_mem; // CHUNK * BLOCK
+    ElTp* shmem_red = (ElTp*)sh_mem; // BLOCK
 
     __shared__ uint32_t tmp_block_id; // <- is volatile needed here?
-    if (threadIdx.x == blockDim.x - 1) {
+    if (threadIdx.x == 0) {
         tmp_block_id = atomicAdd((uint32_t*)dyn_block_id, 1);
     }
     __syncthreads();
@@ -200,15 +200,40 @@ spScanKernel ( typename OP::ElTp* d_out
             __threadfence(); // <- which thread fence to use?
             flags[block_id] = AGG;
         } else {
-             prefixes[block_id] = agg;
+            prefixes[block_id] = agg;
             __threadfence(); // <- which thread fence to use?
             flags[block_id] = PRE;
         }
     }
     __syncthreads();
 
+    if (thread_id == blockDim.x - 1) {
+        if (block_id > 0) {
+            // printf("#TID: %d, #DBID: %d, #SBID %d \n", thread_id, block_id, blockIdx.x);
+            while (flags[block_id-1] != PRE) {}
+            const int32_t prev_prefix = prefixes[block_id-1];
+
+            prefixes[block_id] = agg + prev_prefix;
+            __threadfence();
+            flags[block_id] = PRE;
+
+            int32_t acc = prev_prefix;
+            for (uint32_t i = block_id * blockDim.x * CHUNK; i < block_id * blockDim.x * CHUNK + blockDim.x * CHUNK; i++) {
+                d_out[i] = acc + d_in[i];
+                acc = d_out[i];
+            }
+        } else {
+            int32_t acc = 0;
+            for (uint32_t i = block_id * blockDim.x * CHUNK; i < block_id * blockDim.x * CHUNK + blockDim.x * CHUNK; i++) {
+                d_out[i] = acc + d_in[i];
+                acc = d_out[i];
+            }
+        }
+    }
+    __syncthreads();
+
     // 5. write back from shared to global memory in coalesced fashion.
-    copyFromShr2GlbMem<ElTp, CHUNK>(block_offset, N, d_out, shmem_inp);
+    // copyFromShr2GlbMem<ElTp, CHUNK>(block_offset, N, d_out, shmem_inp);
 }
 
 #endif // KERNELS

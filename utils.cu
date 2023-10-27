@@ -17,8 +17,8 @@
 //#define WORKGROUP_SIZE      128
 //#define MAX_WORKGROUP_SIZE  1024
 
-#define RUNS_GPU            100
-#define RUNS_CPU            5
+#define RUNS_GPU            1
+#define RUNS_CPU            1
 #define NUM_BLOCKS_SCAN     1024
 #define ELEMS_PER_THREAD    12
 
@@ -70,7 +70,8 @@ int gpuAssert(cudaError_t code) {
 void initArray(int32_t* arr, const uint32_t N, const int32_t R) {
     const uint32_t M = 2*R+1;
     for (uint32_t i = 0; i < N; i++) {
-        arr[i] = (rand() % M) - R;
+        // arr[i] = (rand() % M) - R;
+        arr[i] = i;
     }
 }
 

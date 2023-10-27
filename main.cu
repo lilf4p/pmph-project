@@ -55,7 +55,7 @@ int spScanIncAddI32( const uint32_t B     // desired CUDA block size ( <= 1024, 
     cudaMemset(d_out, 0, N*sizeof(int));
 
     // dry run to exercise d_tmp allocation
-    scanInc< Add<int> > ( B, N, d_out, d_in);
+    scanInc< Add<int>> ( B, N, d_out, d_in);
 
     // time the GPU computation
     unsigned long int elapsed;
@@ -78,12 +78,15 @@ int spScanIncAddI32( const uint32_t B     // desired CUDA block size ( <= 1024, 
 
     { // sequential computation
         gettimeofday(&t_start, NULL);
+        // printf("INPUT:\n");
         for(int i=0; i<RUNS_CPU; i++) {
             int acc = 0;
             for(uint32_t i=0; i<N; i++) {
                 acc += h_in[i];
                 h_ref[i] = acc;
+                // printf("%d ", h_in[i]);
             }
+            // printf("\n\n");
         }
         gettimeofday(&t_end, NULL);
         timeval_subtract(&t_diff, &t_end, &t_start);
@@ -95,6 +98,19 @@ int spScanIncAddI32( const uint32_t B     // desired CUDA block size ( <= 1024, 
 
     { // Validation
         cudaMemcpy(h_out, d_out, mem_size, cudaMemcpyDeviceToHost);
+
+        // printf("REF OUTPUT\n");
+        // for(uint32_t i = 0; i<N; i++) {
+        //     printf("%d ", h_ref[i]);
+        // }
+        // printf("\n");
+
+        // printf("SPS OUTPUT\n");
+        // for(uint32_t i = 0; i<N; i++) {
+        //     printf("%d ", h_out[i]);
+        // }
+        // printf("\n\n");
+
         for(uint32_t i = 0; i<N; i++) {
             if(h_out[i] != h_ref[i]) {
                 printf("!!!INVALID!!!: Scan Inclusive AddI32 at index %d, dev-val: %d, host-val: %d\n"
@@ -112,7 +128,6 @@ int spScanIncAddI32( const uint32_t B     // desired CUDA block size ( <= 1024, 
 }
 
 int main (int argc, char * argv[]) {
-
     if (argc != 3) {
         printf("Usage: %s <array-length> <block-size>\n", argv[0]);
         exit(1);

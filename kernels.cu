@@ -144,7 +144,7 @@ scanIncBlock(volatile typename OP::ElTp* ptr, const unsigned int idx) {
  * `d_in`  is the input  array of length `N`
  */
 
-template<class OP, uint8_t CHUNK, uint32_t BLOCK>
+template<class OP, uint8_t CHUNK>
 __global__ void
 spScanKernel ( typename OP::ElTp* d_out
              , typename OP::ElTp* d_in
@@ -156,18 +156,18 @@ spScanKernel ( typename OP::ElTp* d_out
 ) {
     typedef typename OP::ElTp ElTp;
 
-    __shared__ ElTp shmem_inp[CHUNK * BLOCK];
-    __shared__ ElTp shmem_red[BLOCK];
+    extern __shared__ ElTp shmem_inp[];
+    extern __shared__ ElTp shmem_red[];
 
     __shared__ uint32_t tmp_block_id; // <- is volatile needed here?
-    if (threadIdx.x == BLOCK - 1) {
+    if (threadIdx.x == blockDim.x - 1) {
         tmp_block_id = atomicAdd((uint32_t*)dyn_block_id, 1);
     }
     __syncthreads();
 
     uint32_t thread_id = threadIdx.x;
     uint32_t block_id = tmp_block_id;
-    uint32_t block_offset = CHUNK * BLOCK * block_id;
+    uint32_t block_offset = CHUNK * blockDim.x  * block_id;
 
     // register memory for storing the scanned elements.
     ElTp chunk[CHUNK];
@@ -193,7 +193,7 @@ spScanKernel ( typename OP::ElTp* d_out
     // 4. perform an intra-CUDA-block scan 
     ElTp agg = scanIncBlock<OP>(shmem_red, thread_id);
     __syncthreads();
-    if (thread_id == BLOCK-1) {
+    if (thread_id == blockDim.x -1) {
         if (block_id > 0) {
             aggregates[block_id] = agg;
             __threadfence(); // <- which thread fence to use?

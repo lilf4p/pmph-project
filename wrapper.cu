@@ -36,7 +36,6 @@ void scanInc( const uint32_t     B     // desired CUDA block size ( <= 1024, mul
 
     // const uint32_t CHUNK = ELEMS_PER_THREAD*4 / sizeof(typename OP::ElTp);
     const uint32_t CHUNK = 12;
-
     const uint32_t num_blocks = (N + B - 1) / B;
     const size_t   shmem_size = B * sizeof(typename OP::ElTp) * CHUNK;
 
@@ -53,7 +52,7 @@ void scanInc( const uint32_t     B     // desired CUDA block size ( <= 1024, mul
     cudaMemset(prefixes, INC, num_blocks);
     cudaMemset(dyn_block_id, 0, 1);
 
-    spScanKernel<OP, CHUNK, B><<<num_blocks, B>>>(d_out, d_in, aggregates, prefixes, flags, dyn_block_id, N);
+    spScanKernel<OP, CHUNK><<<num_blocks, B, shmem_size>>>(d_out, d_in, aggregates, prefixes, flags, dyn_block_id, N);
 }
 
 #endif

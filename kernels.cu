@@ -91,7 +91,7 @@ scanIncWarp( volatile typename OP::ElTp* ptr, const unsigned int idx ) {
     #pragma unroll
     for (int d=0; d<lgWARP; ++d) {
         int h = 1 << d;
-        if (lane>=h) ptr[idx] = OP::apply(ptr[idx-h], ptr[idx]);
+        if (lane >= h) ptr[idx] = OP::apply(ptr[idx-h], ptr[idx]);
     }
     
     return OP::remVolatile(ptr[idx]);
@@ -112,12 +112,23 @@ scanIncBlock(volatile typename OP::ElTp* ptr, const unsigned int idx) {
     //   the first warp. This works because
     //   warp size = 32, and 
     //   max block size = 32^2 = 1024
-    typename OP::ElTp tmp = OP::remVolatile(ptr[idx]); 
+
+    // Anders: we can remove this synchronization by using `res`, which after
+    // the call to scanIncWarp holds a copy of `ptr[idx]` as the value is
+    // *after* the scanIncWarp.
+    // OLD:
+    //
+    // typename OP::ElTp tmp = OP::remVolatile(ptr[idx]);
+    // __syncthreads();                                   
+    // if (lane == (WARP-1)) {
+    //     ptr[warpid] = tmp; 
+    // }
+
+    // NEW:
+    if (lane == (WARP-1))
+        ptr[warpid] = res;
     __syncthreads();
-    if (lane == (WARP-1)) { 
-        ptr[warpid] = tmp;
-    } 
-    __syncthreads();
+
 
     // 3. scan again the first warp
     if (warpid == 0) scanIncWarp<OP>(ptr, idx);
@@ -127,7 +138,11 @@ scanIncBlock(volatile typename OP::ElTp* ptr, const unsigned int idx) {
     if (warpid > 0) {
         res = OP::apply(ptr[warpid-1], res);
     }
-    
+
+    // Anders: for some reason, this write to `ptr[idx]` had been removed,
+    // meaning that the scan was never actually manifested in shared memory
+    // -- rather, it only existed in the register memory for each thread. ;)
+    ptr[idx] = res;
     return res;
 }
 
@@ -235,5 +250,132 @@ spScanKernel ( typename OP::ElTp* d_out
     // 5. write back from shared to global memory in coalesced fashion.
     // copyFromShr2GlbMem<ElTp, CHUNK>(block_offset, N, d_out, shmem_inp);
 }
+
+// ---------------------------------------------- //
+
+//----------- SINGLE PASS SCAN KERNEL----------//
+// From the weekly assignment 2 kernel scan3rdKernel, modify it to do the scan
+// in a single kernel.
+/**
+ * `N` is the length of the input array
+ * `CHUNK` (the template parameter) is the number of elements to
+ *    be processed sequentially by a thread in one go.
+ * `d_out` is the result array of length `N`
+ * `d_in`  is the input  array of length `N`
+ */
+
+// #define printf(...) { }
+
+template<class OP, uint8_t CHUNK>
+__global__ void
+spScanKernel2 ( typename OP::ElTp* d_out
+              , typename OP::ElTp* d_in
+              , volatile typename OP::ElTp* aggregates
+              , volatile typename OP::ElTp* prefixes
+              , volatile uint8_t* flags // <- initialize all elements with INC flag
+              , volatile uint32_t* dyn_block_id
+              , uint32_t N
+) {
+    typedef typename OP::ElTp ElTp;
+
+    extern __shared__ ElTp sh_mem[];
+    ElTp* shmem_inp = (ElTp*)sh_mem; // CHUNK * BLOCK
+    ElTp* shmem_red = (ElTp*)sh_mem; // BLOCK
+
+    // Anders: instead of declaring a new uint32_t in shared mem, let's reuse
+    // the external shared mem.
+    uint32_t *tmp_block_id = (uint32_t*)sh_mem;
+    // __shared__ uint32_t tmp_block_id;
+
+    if (threadIdx.x == 0) {
+        *tmp_block_id = atomicAdd((uint32_t*)dyn_block_id, 1);
+        // Anders: hint: it may be beneficial (in terms of performance) to reset
+        // dyn_block_id (ie. the copy in global mem) here instead of outside of
+        // the kernel.
+    }
+    __syncthreads();
+
+    uint32_t thread_id = threadIdx.x;
+    uint32_t block_id = *tmp_block_id;
+    uint32_t block_offset = CHUNK * blockDim.x  * block_id;
+
+    // register memory for storing the scanned elements.
+    ElTp chunk[CHUNK];
+
+    // // 1. copy `CHUNK` input elements per thread from global to shared memory
+    copyFromGlb2ShrMem<ElTp, CHUNK>(block_offset, N, OP::identInp(), d_in, shmem_inp);
+
+    // // 2. each thread sequentially reduces its `CHUNK` elements, result is stored in `tmp`
+    uint32_t shmem_offset = thread_id * CHUNK;
+
+    #pragma unroll
+    for (uint32_t i = 0; i < CHUNK; i++)
+        chunk[i] = sh_mem[shmem_offset + i];
+
+    ElTp tmp = OP::identity();
+    #pragma unroll
+    for (uint32_t i = 0; i < CHUNK; i++)
+        chunk[i] = tmp = OP::apply(tmp, chunk[i]);
+    __syncthreads();
+
+    // 3. Each thread publishes in shared memory the reduced result of its `CHUNK` elements 
+    shmem_red[thread_id] = tmp;
+
+    // Anders: this sync not necessary.
+    // __syncthreads();
+
+    // 4. perform an intra-CUDA-block scan 
+    ElTp agg = scanIncBlock<OP>(shmem_red, thread_id);
+    __syncthreads();
+
+    // Anders: __threadfence() is correct, yes
+    if (thread_id == blockDim.x - 1) {
+        if (block_id > 0) {
+            aggregates[block_id] = agg;
+            __threadfence(); // <- which thread fence to use?
+            flags[block_id] = AGG;
+        } else {
+            printf("publishing prefix\n");
+            prefixes[block_id] = agg;
+            __threadfence(); // <- which thread fence to use?
+            flags[block_id] = PRE;
+        }
+    }
+
+    // Anders: I have moved this block up before the lookback step, since if you
+    // later want to implement different lookback methods, you may or may not
+    // need to use shared memory during the lookback, and in this case you must
+    // fetch the `prev_chunk_prefix` before shared mem is reused.
+    ElTp prev_chunk_prefix = OP::identity();
+    if (thread_id > 0) {
+        prev_chunk_prefix = shmem_red[thread_id-1];
+    }
+    __syncthreads();
+
+    if (thread_id == blockDim.x - 1) {
+        if (block_id > 0) {
+            while (flags[block_id - 1] != PRE) {}
+            prefixes[block_id] = OP::apply(prefixes[block_id-1], agg);
+            __threadfence();
+            flags[block_id] = PRE;
+        }
+    }
+
+    __syncthreads();
+
+    // Anders: remember to use this one :D
+    ElTp prev_block_prefix = OP::identity();
+
+    // printf("block_id=%d, thread_id=%d, prefix=%d, prev_prefix=%d\n", block_id, thread_id, chunk[CHUNK-1], prev_chunk_prefix);
+    for (uint32_t i = 0; i < CHUNK; i++) {
+        // printf("\ttid=%d, %d + %d\n", thread_id,chunk[i], prev_chunk_prefix);
+        shmem_inp[shmem_offset + i] = OP::apply(chunk[i], prev_chunk_prefix);
+    }
+    __syncthreads();
+
+    // 5. write back from shared to global memory in coalesced fashion.
+    copyFromShr2GlbMem<ElTp, CHUNK>(block_offset, N, d_out, shmem_inp);
+}
+#undef printf
 
 #endif // KERNELS

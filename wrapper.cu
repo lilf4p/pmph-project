@@ -35,10 +35,6 @@ void scanInc( const uint32_t     B     // desired CUDA block size ( <= 1024, mul
             ) {
 
     const uint32_t CHUNK = 2;
-
-    // const uint32_t num_blocks = (N/CHUNK + B - 1) / B; // OLD num_blocks.
-
-    // Anders: your num_blocks was a little off, but I have fixed it below. :)
     const uint32_t elems_per_block = B * CHUNK;
     const uint32_t num_blocks = (N + elems_per_block - 1) / elems_per_block;
     printf("Number of blocks: %d \n", num_blocks);

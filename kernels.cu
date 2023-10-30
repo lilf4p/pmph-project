@@ -112,23 +112,9 @@ scanIncBlock(volatile typename OP::ElTp* ptr, const unsigned int idx) {
     //   the first warp. This works because
     //   warp size = 32, and 
     //   max block size = 32^2 = 1024
-
-    // Anders: we can remove this synchronization by using `res`, which after
-    // the call to scanIncWarp holds a copy of `ptr[idx]` as the value is
-    // *after* the scanIncWarp.
-    // OLD:
-    //
-    // typename OP::ElTp tmp = OP::remVolatile(ptr[idx]);
-    // __syncthreads();                                   
-    // if (lane == (WARP-1)) {
-    //     ptr[warpid] = tmp; 
-    // }
-
-    // NEW:
     if (lane == (WARP-1))
         ptr[warpid] = res;
     __syncthreads();
-
 
     // 3. scan again the first warp
     if (warpid == 0) scanIncWarp<OP>(ptr, idx);
@@ -139,9 +125,6 @@ scanIncBlock(volatile typename OP::ElTp* ptr, const unsigned int idx) {
         res = OP::apply(ptr[warpid-1], res);
     }
 
-    // Anders: for some reason, this write to `ptr[idx]` had been removed,
-    // meaning that the scan was never actually manifested in shared memory
-    // -- rather, it only existed in the register memory for each thread. ;)
     ptr[idx] = res;
     return res;
 }
@@ -281,15 +264,11 @@ spScanKernel2 ( typename OP::ElTp* d_out
     extern __shared__ ElTp sh_mem[];
     ElTp* shmem_inp = (ElTp*)sh_mem; // CHUNK * BLOCK
     ElTp* shmem_red = (ElTp*)sh_mem; // BLOCK
-
-    // Anders: instead of declaring a new uint32_t in shared mem, let's reuse
-    // the external shared mem.
     uint32_t *tmp_block_id = (uint32_t*)sh_mem;
-    // __shared__ uint32_t tmp_block_id;
 
     if (threadIdx.x == 0) {
         *tmp_block_id = atomicAdd((uint32_t*)dyn_block_id, 1);
-        // Anders: hint: it may be beneficial (in terms of performance) to reset
+        // hint: it may be beneficial (in terms of performance) to reset
         // dyn_block_id (ie. the copy in global mem) here instead of outside of
         // the kernel.
     }
@@ -321,31 +300,23 @@ spScanKernel2 ( typename OP::ElTp* d_out
     // 3. Each thread publishes in shared memory the reduced result of its `CHUNK` elements 
     shmem_red[thread_id] = tmp;
 
-    // Anders: this sync not necessary.
-    // __syncthreads();
-
     // 4. perform an intra-CUDA-block scan 
     ElTp agg = scanIncBlock<OP>(shmem_red, thread_id);
     __syncthreads();
 
-    // Anders: __threadfence() is correct, yes
     if (thread_id == blockDim.x - 1) {
         if (block_id > 0) {
             aggregates[block_id] = agg;
-            __threadfence(); // <- which thread fence to use?
+            __threadfence();
             flags[block_id] = AGG;
         } else {
             printf("publishing prefix\n");
             prefixes[block_id] = agg;
-            __threadfence(); // <- which thread fence to use?
+            __threadfence();
             flags[block_id] = PRE;
         }
     }
 
-    // Anders: I have moved this block up before the lookback step, since if you
-    // later want to implement different lookback methods, you may or may not
-    // need to use shared memory during the lookback, and in this case you must
-    // fetch the `prev_chunk_prefix` before shared mem is reused.
     ElTp prev_chunk_prefix = OP::identity();
     if (thread_id > 0) {
         prev_chunk_prefix = shmem_red[thread_id-1];
@@ -363,7 +334,6 @@ spScanKernel2 ( typename OP::ElTp* d_out
 
     __syncthreads();
 
-    // Anders: remember to use this one :D
     ElTp prev_block_prefix = OP::identity();
 
     // printf("block_id=%d, thread_id=%d, prefix=%d, prev_prefix=%d\n", block_id, thread_id, chunk[CHUNK-1], prev_chunk_prefix);

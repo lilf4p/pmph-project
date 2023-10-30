@@ -32,13 +32,12 @@ void scanInc( const uint32_t     B     // desired CUDA block size ( <= 1024, mul
             , const uint32_t     N     // length of the input array
             , typename OP::ElTp* d_out
             , typename OP::ElTp* d_in
-            ) {
-
-    const uint32_t CHUNK = 2;
+){
+    const uint32_t CHUNK = 12;
     const uint32_t elems_per_block = B * CHUNK;
     const uint32_t num_blocks = (N + elems_per_block - 1) / elems_per_block;
-    printf("Number of blocks: %d \n", num_blocks);
-    const size_t   shmem_size = elems_per_block * sizeof(typename OP::ElTp);
+    const uint32_t shared_mem_size = B * sizeof(typename OP::ElTp) * CHUNK;
+    printf("elems_per_block=%d, CHUNK=%d, num_blocks=%d, shmem_size=%d\n", elems_per_block, CHUNK, num_blocks, shared_mem_size);
 
     typename OP::ElTp* aggregates;
     typename OP::ElTp* prefixes;
@@ -50,11 +49,10 @@ void scanInc( const uint32_t     B     // desired CUDA block size ( <= 1024, mul
     cudaMalloc((void**)&flags, num_blocks*sizeof( uint8_t ));
     cudaMalloc((void**)&dyn_block_id, sizeof( uint32_t ));
 
-    cudaMemset(prefixes, 0, num_blocks);
-    cudaMemset(flags, 0, num_blocks);
-    cudaMemset(dyn_block_id, 0, 1);
+    cudaMemset(flags, INC, num_blocks * sizeof(uint8_t));
+    cudaMemset(dyn_block_id, 0, sizeof(uint32_t));
 
-    spScanKernel2<OP, CHUNK><<<num_blocks, B, shmem_size>>>(d_out, d_in, aggregates, prefixes, flags, dyn_block_id, N);
+    spScanKernel<OP, CHUNK><<<num_blocks, B, shared_mem_size>>>(d_out, d_in, aggregates, prefixes, flags, dyn_block_id, N);
 }
 
 #endif

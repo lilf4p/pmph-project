@@ -53,9 +53,6 @@ int spScanIncAddI32( const uint32_t B     // desired CUDA block size ( <= 1024, 
     int* h_ref = (int*)malloc(mem_size);
     cudaMemset(d_out, 0, N*sizeof(int));
 
-    // dry run to exercise d_tmp allocation
-    scanInc< Add<int>> ( B, N, d_out, d_in);
-
     // kernel parameters 
     const uint32_t CHUNK = 12;
     const uint32_t elems_per_block = B * CHUNK;
@@ -73,6 +70,11 @@ int spScanIncAddI32( const uint32_t B     // desired CUDA block size ( <= 1024, 
     cudaMalloc((void**)&prefixes, num_blocks*sizeof( typename OP::ElTp));
     cudaMalloc((void**)&flags, num_blocks*sizeof( uint8_t ));
     cudaMalloc((void**)&dyn_block_id, sizeof( uint32_t ));
+
+    // dry run to exercise d_tmp allocation
+    cudaMemset(flags, INC, num_blocks * sizeof(uint8_t));
+    cudaMemset(dyn_block_id, 0, sizeof(uint32_t));
+    scanInc< Add<int>> ( B, N, d_out, d_in);
 
     // time the GPU computation
     unsigned long int elapsed;

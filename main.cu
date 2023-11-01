@@ -5,7 +5,6 @@
 
 #include "kernels.cu"
 #include "utils.cu"
-#include "wrapper.cu"
 
 // Measure a more-realistic optimal bandwidth by a simple, memcpy-like kernel 
 int bandwidthMemcpy( const uint32_t B     // desired CUDA block size ( <= 1024, multiple of 32)
@@ -57,13 +56,36 @@ int spScanIncAddI32( const uint32_t B     // desired CUDA block size ( <= 1024, 
     // dry run to exercise d_tmp allocation
     scanInc< Add<int>> ( B, N, d_out, d_in);
 
+    // kernel parameters 
+    const uint32_t CHUNK = 12;
+    const uint32_t elems_per_block = B * CHUNK;
+    const uint32_t num_blocks = (N + elems_per_block - 1) / elems_per_block;
+    const uint32_t shared_mem_size = B * sizeof(typename OP::ElTp) * CHUNK;
+    printf("elems_per_block=%d, CHUNK=%d, num_blocks=%d, shmem_size=%d\n", elems_per_block, CHUNK, num_blocks, shared_mem_size);
+
+    // mallocs 
+    typename OP::ElTp* aggregates;
+    typename OP::ElTp* prefixes;
+    uint8_t* flags;
+    uint32_t* dyn_block_id;
+
+    cudaMalloc((void**)&aggregates, num_blocks*sizeof( typename OP::ElTp));
+    cudaMalloc((void**)&prefixes, num_blocks*sizeof( typename OP::ElTp));
+    cudaMalloc((void**)&flags, num_blocks*sizeof( uint8_t ));
+    cudaMalloc((void**)&dyn_block_id, sizeof( uint32_t ));
+
     // time the GPU computation
     unsigned long int elapsed;
     struct timeval t_start, t_end, t_diff;
     gettimeofday(&t_start, NULL); 
 
     for(int i=0; i<RUNS_GPU; i++) {
-        scanInc< Add<int> > ( B, N, d_out, d_in );
+
+        // reset before every execution
+        cudaMemset(flags, INC, num_blocks * sizeof(uint8_t));
+        cudaMemset(dyn_block_id, 0, sizeof(uint32_t));
+
+        spLookbackScanKernel<OP, CHUNK><<<num_blocks, B, shared_mem_size>>>(d_out, d_in, aggregates, prefixes, flags, dyn_block_id, N);
     }
     cudaDeviceSynchronize();
 
@@ -152,8 +174,8 @@ int main (int argc, char * argv[]) {
     // computing a "realistic/achievable" bandwidth figure
     bandwidthMemcpy(B, N, d_in, d_out);
 
+    // run the single pass scan 
     spScanIncAddI32(B, N, h_in, d_in, d_out);
-    printf("Single Pass Scan is yet to be implemented...\n");
 
     // cleanup memory
     free(h_in);

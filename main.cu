@@ -189,7 +189,7 @@ int main (int argc, char * argv[]) {
 
     const uint32_t N = atoi(argv[1]);
     const uint32_t B = atoi(argv[2]);
-    const uint8_t = atoi(argv[3]);
+    const uint8_t kernel = atoi(argv[3]);
     printf("N=%d, B=%d, Kernel Version=%d\n", N, B, kernel);
 
     const size_t mem_size = N*sizeof(int);

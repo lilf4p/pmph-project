@@ -205,6 +205,9 @@ int main (int argc, char * argv[]) {
     // computing a "realistic/achievable" bandwidth figure
     bandwidthMemcpy(B, N, d_in, d_out);
 
+    double gigaBytesPerSec;
+    unsigned long int elapsed;
+    struct timeval t_start, t_end, t_diff;
     // Baseline cuda memcpy
     { 
         gettimeofday(&t_start, NULL); 

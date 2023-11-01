@@ -338,4 +338,104 @@ spScanKernel ( typename OP::ElTp* d_out
     copyFromShr2GlbMem<ElTp, CHUNK>(block_offset, N, d_out, shared_mem);
 }
 
+template<class OP, uint8_t CHUNK>
+__global__ void
+spLookbackScanKernel ( typename OP::ElTp* d_out
+                     , typename OP::ElTp* d_in
+                     , volatile typename OP::ElTp* aggregates
+                     , volatile typename OP::ElTp* prefixes
+                     , volatile uint8_t* flags // <- initialize all elements with INC flag
+                     , volatile uint32_t* dyn_block_id
+                     , uint32_t N
+) {
+    typedef typename OP::ElTp ElTp;
+
+    extern __shared__ ElTp shared_mem[]; // CHUNK * BLOCK
+
+    __shared__ uint32_t tmp_block_id;
+    if (threadIdx.x == 0) {
+        tmp_block_id = atomicAdd((uint32_t*)dyn_block_id, 1);
+    }
+    __syncthreads();
+
+    uint32_t thread_id = threadIdx.x;
+    uint32_t block_id = tmp_block_id;
+    uint32_t block_offset = CHUNK * blockDim.x  * block_id;
+
+    // register memory for storing the scanned elements.
+    ElTp chunk[CHUNK];
+
+    // // 1. copy `CHUNK` input elements per thread from global to shared memory
+    copyFromGlb2ShrMem<ElTp, CHUNK>(block_offset, N, OP::identInp(), d_in, shared_mem);
+
+    // // 2. each thread sequentially reduces its `CHUNK` elements, result is stored in `tmp`
+    ElTp tmp = OP::identity();
+    uint32_t shared_mem_offset = thread_id * CHUNK;
+    #pragma unroll
+    for (uint32_t i = 0; i < CHUNK; i++) {
+        ElTp elm = shared_mem[shared_mem_offset + i];
+        tmp = OP::apply(tmp, elm);
+        chunk[i] = tmp;
+    }
+    __syncthreads();
+
+    // 3. Each thread publishes in shared memory the reduced result of its `CHUNK` elements
+    shared_mem[thread_id] = tmp;
+    __syncthreads();
+
+    // 4. perform an intra-CUDA-block scan
+    ElTp agg = scanIncBlock<OP>(shared_mem, thread_id);
+    __syncthreads();
+    if (thread_id == blockDim.x -1) {
+        if (block_id > 0) {
+            aggregates[block_id] = agg;
+            __threadfence();
+            flags[block_id] = AGG;
+        } else {
+            prefixes[block_id] = agg;
+            __threadfence();
+            flags[block_id] = PRE;
+        }
+    }
+    __syncthreads();
+
+    ElTp prev_chunk_prefix = OP::identity();
+    if (thread_id > 0) {
+        prev_chunk_prefix = shared_mem[thread_id-1];
+    }
+    __syncthreads();
+
+    __shared__ ElTp prev_block_prefix;
+    if (thread_id == blockDim.x-1) {
+        prev_block_prefix = OP::identity();
+        if (block_id > 0) {
+            uint32_t prev_block_id = block_id-1;
+            while (true) {
+                uint8_t flag = flags[prev_block_id];
+                if (flag == PRE) {
+                    prev_block_prefix = OP::apply(prefixes[prev_block_id], prev_block_prefix);
+                    break;
+                } else if (flag == AGG) {
+                    prev_block_prefix = OP::apply(aggregates[prev_block_id], prev_block_prefix);
+                    prev_block_id--;
+                }
+            }
+
+            prefixes[block_id] = OP::apply(prev_block_prefix, agg);
+            __threadfence();
+            flags[block_id] = PRE;
+        }
+    }
+    __syncthreads();
+
+    ElTp prev_total_prefix = OP::apply(prev_block_prefix, prev_chunk_prefix);
+    for (uint32_t i = 0; i < CHUNK; i++) {
+        shared_mem[shared_mem_offset + i] = OP::apply(prev_total_prefix, chunk[i]);
+    }
+    __syncthreads();
+
+    // 5. write back from shared to global memory in coalesced fashion.
+    copyFromShr2GlbMem<ElTp, CHUNK>(block_offset, N, d_out, shared_mem);
+}
+
 #endif // KERNELS

@@ -411,18 +411,15 @@ spLookbackScanKernel ( typename OP::ElTp* d_out
         if (block_id > 0) {
             uint32_t prev_block_id = block_id-1;
             while (true) {
-                if (flags[prev_block_id] == PRE) {
+                uint8_t flag = flags[prev_block_id];
+                if (flag == PRE) {
                     prev_block_prefix = OP::apply(prefixes[prev_block_id], prev_block_prefix);
                     break;
-                } else if (flags[prev_block_id] == AGG) {
+                } else if (flag == AGG) {
                     prev_block_prefix = OP::apply(aggregates[prev_block_id], prev_block_prefix);
-                }
-                if (prev_block_id > 0) {
                     prev_block_id--;
                 }
             }
-
-            printf("block_id=%d, prev_block_prefix=%d\n", block_id, prev_block_prefix);
 
             prefixes[block_id] = OP::apply(prev_block_prefix, agg);
             __threadfence();

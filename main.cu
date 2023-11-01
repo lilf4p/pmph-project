@@ -104,11 +104,11 @@ int spScanInc( const uint32_t B     // desired CUDA block size ( <= 1024, multip
             break;
         default:
             printf("Kernel Version must be a value between 0-3\n");
-            printf("<kernel-version>:\n
-                - 0: Naive implementation that use global memory (spScanKernelDepr)\n
-                - 1: Without loopback (spScanKernel)\n
-                - 2: Single thread Loopback (spLookbackScanKernel)\n
-                - 3: Warp Loopback (spWarpLookbackScanKernel)\n\n");
+            printf("<kernel-version>:\n"
+            "    - 0: Naive implementation that uses global memory (spScanKernelDepr)\n"
+            "    - 1: Without loopback (spScanKernel)\n"
+            "    - 2: Single thread Loopback (spLookbackScanKernel)\n"
+            "    - 3: Warp Loopback (spWarpLookbackScanKernel)\n\n");            
             exit(1);
         }
     }
@@ -177,11 +177,11 @@ int spScanInc( const uint32_t B     // desired CUDA block size ( <= 1024, multip
 int main (int argc, char * argv[]) {
     if (argc != 4) {
         printf("Usage: %s <array-length> <block-size> <kernel-version>\n", argv[0]);
-        printf("<kernel-version>:\n
-                - 0: Naive implementation that use global memory (spScanKernelDepr)\n
-                - 1: Without loopback (spScanKernel)\n
-                - 2: Single thread Loopback (spLookbackScanKernel)\n
-                - 3: Warp Loopback (spWarpLookbackScanKernel)\n\n");
+        printf("<kernel-version>:\n"
+        "    - 0: Naive implementation that uses global memory (spScanKernelDepr)\n"
+        "    - 1: Without loopback (spScanKernel)\n"
+        "    - 2: Single thread Loopback (spLookbackScanKernel)\n"
+        "    - 3: Warp Loopback (spWarpLookbackScanKernel)\n\n");
         exit(1);
     }
 

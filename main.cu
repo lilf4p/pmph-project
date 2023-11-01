@@ -47,6 +47,7 @@ int spScanInc( const uint32_t B     // desired CUDA block size ( <= 1024, multip
                    , int* h_in            // host input    of size: N * sizeof(int)
                    , int* d_in            // device input  of size: N * sizeof(ElTp)
                    , int* d_out           // device result of size: N * sizeof(int)
+                   , uint8_t kernel_version    // scan kernel version
 ) {
 
     const size_t mem_size = N * sizeof(int);
@@ -87,8 +88,29 @@ int spScanInc( const uint32_t B     // desired CUDA block size ( <= 1024, multip
         // reset before every execution
         cudaMemset(flags, INC, num_blocks * sizeof(uint8_t));
         cudaMemset(dyn_block_id, 0, sizeof(uint32_t));
-
-        spLookbackScanKernel<OP, CHUNK><<<num_blocks, B, shared_mem_size>>>(d_out, d_in, aggregates, prefixes, flags, dyn_block_id, N);
+        switch (kernel_version)
+        {
+        case 0:
+            spScanKernelDepr<OP, CHUNK><<<num_blocks, B, shared_mem_size>>>(d_out, d_in, aggregates, prefixes, flags, dyn_block_id, N);
+            break;
+        case 1:
+            spScanKernel<OP, CHUNK><<<num_blocks, B, shared_mem_size>>>(d_out, d_in, aggregates, prefixes, flags, dyn_block_id, N);
+            break;
+        case 2: 
+            spLookbackScanKernel<OP, CHUNK><<<num_blocks, B, shared_mem_size>>>(d_out, d_in, aggregates, prefixes, flags, dyn_block_id, N);
+            break;
+        case 3: 
+            spWarpLookbackScanKernel<OP, CHUNK><<<num_blocks, B, shared_mem_size>>>(d_out, d_in, aggregates, prefixes, flags, dyn_block_id, N);
+            break;
+        default:
+            printf("Kernel Version must be a value between 0-3\n");
+            printf("<kernel-version>:\n
+                - 0: Naive implementation that use global memory (spScanKernelDepr)\n
+                - 1: Without loopback (spScanKernel)\n
+                - 2: Single thread Loopback (spLookbackScanKernel)\n
+                - 3: Warp Loopback (spWarpLookbackScanKernel)\n\n");
+            exit(1);
+        }
     }
     cudaDeviceSynchronize();
 
@@ -153,8 +175,13 @@ int spScanInc( const uint32_t B     // desired CUDA block size ( <= 1024, multip
 }
 
 int main (int argc, char * argv[]) {
-    if (argc != 3) {
-        printf("Usage: %s <array-length> <block-size>\n", argv[0]);
+    if (argc != 4) {
+        printf("Usage: %s <array-length> <block-size> <kernel-version>\n", argv[0]);
+        printf("<kernel-version>:\n
+                - 0: Naive implementation that use global memory (spScanKernelDepr)\n
+                - 1: Without loopback (spScanKernel)\n
+                - 2: Single thread Loopback (spLookbackScanKernel)\n
+                - 3: Warp Loopback (spWarpLookbackScanKernel)\n\n");
         exit(1);
     }
 
@@ -162,7 +189,8 @@ int main (int argc, char * argv[]) {
 
     const uint32_t N = atoi(argv[1]);
     const uint32_t B = atoi(argv[2]);
-    printf("N=%d, B=%d\n", N, B);
+    const uint8_t = atoi(argv[3]);
+    printf("N=%d, B=%d, Kernel Version=%d\n", N, B, kernel);
 
     const size_t mem_size = N*sizeof(int);
     int* h_in    = (int*) malloc(mem_size);
@@ -178,7 +206,7 @@ int main (int argc, char * argv[]) {
     bandwidthMemcpy(B, N, d_in, d_out);
 
     // run the single pass scan 
-    spScanInc<Add<int>>(B, N, h_in, d_in, d_out);
+    spScanInc<Add<int>>(B, N, h_in, d_in, d_out, kernel);
 
     // cleanup memory
     free(h_in);

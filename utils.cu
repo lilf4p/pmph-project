@@ -17,10 +17,8 @@
 //#define WORKGROUP_SIZE      128
 //#define MAX_WORKGROUP_SIZE  1024
 
-#define RUNS_GPU            1
-#define RUNS_CPU            1
-#define NUM_BLOCKS_SCAN     1024
-#define ELEMS_PER_THREAD    12
+#define RUNS_GPU            100
+#define RUNS_CPU            10
 
 typedef unsigned int uint32_t;
 typedef int           int32_t;
@@ -32,6 +30,31 @@ uint32_t MAX_BLOCK;
 uint32_t MAX_SHMEM;
 
 cudaDeviceProp prop;
+
+// ------ TYPES AND OPERATORS ------- //
+
+/**
+ * Generic Add operator that can be instantiated over
+ *  numeric-basic types, such as int32_t, int64_t,
+ *  float, double, etc.
+ */
+template<class T>
+class Add {
+  public:
+    // Use only one type
+    //typedef T InpElTp;
+    //typedef T RedElTp;
+    typedef T ElTp;
+    static __device__ __host__ inline T identInp()                    { return (T)0;    }
+    static __device__ __host__ inline T mapFun(const T& el)           { return el;      }
+    static __device__ __host__ inline T identity()                    { return (T)0;    }
+    static __device__ __host__ inline T apply(const T t1, const T t2) { return t1 + t2; }
+
+    static __device__ __host__ inline bool equals(const T t1, const T t2) { return (t1 == t2); }
+    static __device__ __host__ inline T remVolatile(volatile T& t)    { T res = t; return res; }
+};
+
+// -------------------------------------//
 
 void initHwd() {
     int nDevices;
@@ -98,4 +121,21 @@ void validate(const int32_t* ref_arr, const int32_t* arr, const uint32_t N) {
     }
     printf("VALID result!\n\n");
 }
+
+uint32_t closestMul32(uint32_t x) {
+    return ((x + 31) / 32) * 32;
+}
+
+void log2UB(uint32_t n, uint32_t* ub, uint32_t* lg) {
+    uint32_t r = 0;
+    uint32_t m = 1;
+    if( n <= 0 ) { printf("Error: log2(0) undefined. Exiting!!!"); exit(1); }
+    while(m<n) {
+        r = r + 1;
+        m = m * 2;
+    }
+    *ub = m;
+    *lg = r;
+}
+
 #endif // UTILS

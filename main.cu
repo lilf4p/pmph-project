@@ -6,8 +6,6 @@
 #include "kernels.cu"
 #include "utils.cu"
 
-#define OP Add<int>
-
 // Measure a more-realistic optimal bandwidth by a simple, memcpy-like kernel 
 int bandwidthMemcpy( const uint32_t B     // desired CUDA block size ( <= 1024, multiple of 32)
                    , const size_t   N     // length of the input array
@@ -43,7 +41,8 @@ int bandwidthMemcpy( const uint32_t B     // desired CUDA block size ( <= 1024, 
 }
 
 // Function that benchmark and validate the single pass scan 
-int spScanIncAddI32( const uint32_t B     // desired CUDA block size ( <= 1024, multiple of 32)
+template<class OP>
+int spScanInc( const uint32_t B     // desired CUDA block size ( <= 1024, multiple of 32)
                    , const size_t   N     // length of the input array
                    , int* h_in            // host input    of size: N * sizeof(int)
                    , int* d_in            // device input  of size: N * sizeof(ElTp)
@@ -179,7 +178,7 @@ int main (int argc, char * argv[]) {
     bandwidthMemcpy(B, N, d_in, d_out);
 
     // run the single pass scan 
-    spScanIncAddI32(B, N, h_in, d_in, d_out);
+    spScanInc<Add<int>>(B, N, h_in, d_in, d_out);
 
     // cleanup memory
     free(h_in);

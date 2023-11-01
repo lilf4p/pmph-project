@@ -20,7 +20,7 @@ int bandwidthMemcpy( const uint32_t B     // desired CUDA block size ( <= 1024, 
     unsigned long int elapsed;
     struct timeval t_start, t_end, t_diff;
 
-    { // timing the GPU implementations
+    { // timing the naivememcpy 
         gettimeofday(&t_start, NULL); 
 
         for(int i=0; i<RUNS_GPU; i++) {
@@ -204,6 +204,21 @@ int main (int argc, char * argv[]) {
 
     // computing a "realistic/achievable" bandwidth figure
     bandwidthMemcpy(B, N, d_in, d_out);
+
+    // Baseline cuda memcpy
+    { 
+        gettimeofday(&t_start, NULL); 
+        for(int i=0; i<RUNS_GPU; i++) {
+            cudaMemcpy(h_in, h_in, mem_size, cudaMemcpyHostToHost);
+
+        }
+        gettimeofday(&t_end, NULL);
+        timeval_subtract(&t_diff, &t_end, &t_start);
+        elapsed = (t_diff.tv_sec*1e6+t_diff.tv_usec) / RUNS_GPU;
+        gigaBytesPerSec = 2 * N * sizeof(int) * 1.0e-3f / elapsed;
+        printf("Baseline Cuda Memcpy runs in: %lu microsecs, GB/sec: %.2f\n\n"
+              , elapsed, gigaBytesPerSec);
+    }
 
     // run the single pass scan 
     spScanInc<Add<int>>(B, N, h_in, d_in, d_out, kernel);

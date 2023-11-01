@@ -6,6 +6,8 @@
 #include "kernels.cu"
 #include "utils.cu"
 
+#define OP Add<int>
+
 // Measure a more-realistic optimal bandwidth by a simple, memcpy-like kernel 
 int bandwidthMemcpy( const uint32_t B     // desired CUDA block size ( <= 1024, multiple of 32)
                    , const size_t   N     // length of the input array

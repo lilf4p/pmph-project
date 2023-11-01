@@ -93,7 +93,7 @@ int gpuAssert(cudaError_t code) {
 void initArray(int32_t* arr, const uint32_t N, const int32_t R) {
     const uint32_t M = 2*R+1;
     for (uint32_t i = 0; i < N; i++) {
-        // arr[i] = (rand() % M) - R;
+        arr[i] = (rand() % M) - R;
         arr[i] = i;
     }
 }

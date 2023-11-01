@@ -9,7 +9,7 @@ default: clean compile run
 
 compile: $(SP_SCAN)
 
-$(SP_SCAN): utils.cu kernels.cu main.cu wrapper.cu
+$(SP_SCAN): utils.cu kernels.cu main.cu
 	$(COMPILER) $(OPT_FLAGS) -o $(SP_SCAN).out main.cu
 
 run: $(SP_SCAN)

@@ -74,7 +74,7 @@ int spScanIncAddI32( const uint32_t B     // desired CUDA block size ( <= 1024, 
     // dry run to exercise d_tmp allocation
     cudaMemset(flags, INC, num_blocks * sizeof(uint8_t));
     cudaMemset(dyn_block_id, 0, sizeof(uint32_t));
-    scanInc< Add<int>> ( B, N, d_out, d_in);
+    spLookbackScanKernel<OP, CHUNK><<<num_blocks, B, shared_mem_size>>>(d_out, d_in, aggregates, prefixes, flags, dyn_block_id, N);
 
     // time the GPU computation
     unsigned long int elapsed;

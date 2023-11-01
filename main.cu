@@ -32,7 +32,7 @@ int bandwidthMemcpy( const uint32_t B     // desired CUDA block size ( <= 1024, 
         timeval_subtract(&t_diff, &t_end, &t_start);
         elapsed = (t_diff.tv_sec*1e6+t_diff.tv_usec) / RUNS_GPU;
         gigaBytesPerSec = 2 * N * sizeof(int) * 1.0e-3f / elapsed;
-        printf("Naive Memcpy GPU Kernel runs in: %lu microsecs, GB/sec: %.2f\n\n\n"
+        printf("Naive Memcpy GPU Kernel runs in: %lu microsecs, GB/sec: %.2f\n"
               , elapsed, gigaBytesPerSec);
     }
  
@@ -212,7 +212,7 @@ int main (int argc, char * argv[]) {
     { 
         gettimeofday(&t_start, NULL); 
         for(int i=0; i<RUNS_GPU; i++) {
-            cudaMemcpy(h_in, h_in, mem_size, cudaMemcpyHostToHost);
+            cudaMemcpy(d_out, d_in, mem_size, cudaMemcpyDeviceToDevice);
 
         }
         gettimeofday(&t_end, NULL);

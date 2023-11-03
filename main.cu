@@ -77,7 +77,7 @@ int bandwidthCudaMemcpy( const size_t   N     // length of the input array
 // Return the gigaBytesPerSec of the sps 
 template<class OP>
 int spScanInc( const uint32_t B     // desired CUDA block size ( <= 1024, multiple of 32)
-                   , uint32_t N     // length of the input array
+                   , const uint32_t N     // length of the input array
                    , int* h_in            // host input    of size: N * sizeof(int)
                    , int* d_in            // device input  of size: N * sizeof(int)
                    , int* d_out           // device result of size: N * sizeof(int)

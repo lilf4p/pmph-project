@@ -288,13 +288,13 @@ int main (int argc, char * argv[]) {
         int count = 0;
 
         std::ofstream results;
-        results.open("bench-sps-%d.csv", CHUNK);
+        results.open("bench-sps-" + std::to_string(CHUNK) + ".csv");
         results << "kernel,input,block,chunk,bandwidth\n";
         std::ofstream naive_memcpy_res;
-        naive_memcpy_res.open("bench-naiveMemcpy-" << std::to_string(CHUNK) << ".csv");
+        naive_memcpy_res.open("bench-naiveMemcpy-" + std::to_string(CHUNK) + ".csv");
         naive_memcpy_res << "input,block,bandwidth\n";
         std::ofstream cuda_memcpy_res;
-        cuda_memcpy_res.open("bench-cudaMemcpy-" << std::to_string(CHUNK) << ".csv");
+        cuda_memcpy_res.open("bench-cudaMemcpy-" + std::to_string(CHUNK) + ".csv");
         cuda_memcpy_res << "input,bandwidth\n";
 
         for (int kernel = 0; kernel < num_ker; kernel++) {

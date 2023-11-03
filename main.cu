@@ -257,6 +257,8 @@ int main (int argc, char * argv[]) {
     uint32_t N = atoi(argv[2]);
     uint32_t B = atoi(argv[3]);
     uint32_t KERNEL = atoi(argv[4]);
+    
+    // Constant value 
     const uint8_t CHUNK = 12;
 
     int* h_in;
@@ -300,10 +302,10 @@ int main (int argc, char * argv[]) {
                         initArray(h_in, n_sizes[n], 13);
         
                         // run the single pass scan 
-                        //double gigaBytesPerSec = spScanInc<Add<int>>(block_sizes[block_size], n_sizes[n], h_in, d_in, d_out, kernel_versions[kernel], CHUNK, 0);
+                        double gigaBytesPerSec = spScanInc<Add<int>>(block_sizes[block_size], n_sizes[n], h_in, d_in, d_out, kernel_versions[kernel], CHUNK, 0);
 
                         // write result
-                        //results << gigaBytesPerSec << "\n";
+                        results << gigaBytesPerSec << "\n";
 
                     //}
                 }

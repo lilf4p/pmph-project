@@ -270,9 +270,9 @@ int main (int argc, char * argv[]) {
         printf("==== Benchmark ====");
         
         // Try different configuration
-        const int kernel_versions[] = {2,3};
-        const int n_sizes[] = {1024, 221184, 1000000, 10000000, 100003565}; 
-        const int block_sizes[] = {128,256,512,1024};
+        const uint32_t kernel_versions[] = {2,3};
+        const uint32_t n_sizes[] = {1024, 221184, 1000000, 10000000, 100003565}; 
+        const uint32_t block_sizes[] = {128,256,512,1024};
         //const uint32_t chunk_values[] = {1,2,6,10,12,14}; // Do this manually
 
         printf("Num Kernel: %d\n", arrayLength(kernel_versions));

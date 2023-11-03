@@ -14,7 +14,7 @@
 #define lgWARP      5
 #define WARP        (1<<lgWARP)
 
-#define CHUNK_VALUE 12
+#define CHUNK_VALUE 15
 
 //#define WORKGROUP_SIZE      128
 //#define MAX_WORKGROUP_SIZE  1024

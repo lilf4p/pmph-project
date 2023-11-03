@@ -221,6 +221,13 @@ int main (int argc, char * argv[]) {
 
     const uint32_t N = atoi(argv[1]);
     const uint32_t B = atoi(argv[2]);
+
+    // block size must be a multiple of 32
+    if (B % 32 != 0) {
+        printf("Block size must be a multiple of 32!\n");
+        exit(1);
+    }
+
     const uint8_t kernel = atoi(argv[3]);
     printf("N=%d, B=%d, Kernel Version=%d\n\n", N, B, kernel);
 

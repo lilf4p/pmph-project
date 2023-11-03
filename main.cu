@@ -302,7 +302,7 @@ int main (int argc, char * argv[]) {
                         initArray(h_in, n_sizes[n], 13);
         
                         // run the single pass scan 
-                        double gigaBytesPerSec = spScanInc<Add<int>>(block_sizes[block_size], n_sizes[n], h_in, d_in, d_out, kernel_versions[kernel], CHUNK, 0);
+                        double gigaBytesPerSec = spScanInc<Add<int>, CHUNK>(block_sizes[block_size], n_sizes[n], h_in, d_in, d_out, kernel_versions[kernel], 0);
 
                         // write result
                         results << gigaBytesPerSec << "\n";

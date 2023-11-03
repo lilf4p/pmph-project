@@ -271,7 +271,7 @@ int main (int argc, char * argv[]) {
         const uint32_t kernel_versions[] = {2,3};
         const uint32_t n_sizes[] = {1024, 221184, 1000000, 10000000, 100003565}; 
         const uint32_t block_sizes[] = {128,256,512,1024};
-        // const uint32_t chunk_values[] = {1,2,6,10,12,14}; // Do this manually //
+        // const uint32_t chunk_values[] = {1,2,6,10,12,14}; // Do this manually
 
         int count = 0;
 

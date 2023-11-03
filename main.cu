@@ -261,6 +261,10 @@ int main (int argc, char * argv[]) {
     const uint8_t kernel = atoi(argv[4]);
     const uint32_t chunk = 12;
 
+    int* h_in;
+    int* d_in;
+    int* d_out;
+
     if (BENCHMARK) {
         
         // Try different configuration
@@ -291,9 +295,7 @@ int main (int argc, char * argv[]) {
 
                         // run with current config 
                         const size_t mem_size = n*sizeof(int);
-                        int* h_in    = (int*) malloc(mem_size);
-                        int* d_in;
-                        int* d_out;
+                        h_in = (int*) malloc(mem_size);
                         cudaMalloc((void**)&d_in ,   mem_size);
                         cudaMalloc((void**)&d_out,   mem_size);
 
@@ -336,10 +338,8 @@ int main (int argc, char * argv[]) {
         if (kernel == 3) printf("Latest Version of the SPScan Kernel is running...\n\n");
         else printf("An older version of the SPScan Kernel is running. For the best performance run %s <array-length> <block-size> 3\n\n", argv[0]);
 
-        const size_t mem_size = N*sizeof(int);
-        int* h_in    = (int*) malloc(mem_size);
-        int* d_in;
-        int* d_out;
+        const size_t mem_size = N*sizeof(int); 
+        h_in = (int*) malloc(mem_size);
         cudaMalloc((void**)&d_in ,   mem_size);
         cudaMalloc((void**)&d_out,   mem_size);
 

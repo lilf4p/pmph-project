@@ -132,12 +132,13 @@ int spScanInc( uint32_t B     // desired CUDA block size ( <= 1024, multiple of 
             spWarpLookbackScanKernel<OP, CHUNK><<<num_blocks, B, shared_mem_size>>>(d_out, d_in, aggregates, prefixes, flags, dyn_block_id, N);
             break;
         default:
-            printf("Kernel Version must be a value between 0-3\n");
+            printf("Kernel Version must be a value between 0-4\n");
             printf("<kernel-version>:\n"
             "    - 0: Naive implementation that uses global memory (spScanKernelDepr)\n"
             "    - 1: Without loopback (spScanKernel)\n"
             "    - 2: Single thread Loopback (spLookbackScanKernel)\n"
-            "    - 3: Warp Loopback (spWarpLookbackScanKernel)\n\n");            
+            "    - 3: Warp Loopback (spWarpLookbackScanKernel)\n"
+            "    - 4: Optimized Warp Loopback (spWarpLookbackScanKernelOpt)\n\n");            
             exit(1);
         }
     }
@@ -170,12 +171,13 @@ int spScanInc( uint32_t B     // desired CUDA block size ( <= 1024, multiple of 
             spWarpLookbackScanKernel<OP, CHUNK><<<num_blocks, B, shared_mem_size>>>(d_out, d_in, aggregates, prefixes, flags, dyn_block_id, N);
             break;
         default:
-            printf("Kernel Version must be a value between 0-3\n");
+            printf("Kernel Version must be a value between 0-4\n");
             printf("<kernel-version>:\n"
             "    - 0: Naive implementation that uses global memory (spScanKernelDepr)\n"
             "    - 1: Without loopback (spScanKernel)\n"
             "    - 2: Single thread Loopback (spLookbackScanKernel)\n"
-            "    - 3: Warp Loopback (spWarpLookbackScanKernel)\n\n");            
+            "    - 3: Warp Loopback (spWarpLookbackScanKernel)\n"
+            "    - 4: Optimized Warp Loopback (spWarpLookbackScanKernelOpt)\n\n");            
             exit(1);
         }
     }
@@ -251,7 +253,8 @@ int main (int argc, char * argv[]) {
         "    - 0: Naive implementation that uses global memory (spScanKernelDepr)\n"
         "    - 1: Without loopback (spScanKernel)\n"
         "    - 2: Single thread Loopback (spLookbackScanKernel)\n"
-        "    - 3: Warp Loopback (spWarpLookbackScanKernel)\n\n");
+        "    - 3: Warp Loopback (spWarpLookbackScanKernel)\n"
+        "    - 4: Optimized Warp Loopback (spWarpLookbackScanKernelOpt)\n\n");
         exit(1);
     }
 
@@ -275,7 +278,7 @@ int main (int argc, char * argv[]) {
         printf("==== Benchmark ====\n");
         
         // Try different configuration
-        uint32_t kernel_versions[] = {2,3};
+        uint32_t kernel_versions[] = {4};
         uint32_t n_sizes[] = {1024, 221184, 1000000, 10000000, 100003565}; 
         uint32_t block_sizes[] = {64,128,256,512,1024};
         //const uint32_t chunk_values[] = {1,2,6,10,12,14}; // Do this manually

@@ -326,7 +326,7 @@ int main (int argc, char * argv[]) {
 
         // Info Current Run
         printf("N=%d, B=%d, Kernel Version=%d\n", N, B, KERNEL);
-        if (kernel == 3) printf("Latest Version of the SPScan Kernel is running...\n\n");
+        if (KERNEL == 3) printf("Latest Version of the SPScan Kernel is running...\n\n");
         else printf("An older version of the SPScan Kernel is running. For the best performance run %s <array-length> <block-size> 3\n\n", argv[0]);
 
         const size_t mem_size = N*sizeof(int); 

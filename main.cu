@@ -76,13 +76,13 @@ int bandwidthCudaMemcpy( const size_t   N     // length of the input array
 // Function that benchmark and validate the single pass scan 
 // Return the gigaBytesPerSec of the sps 
 template<class OP>
-int spScanInc( const uint32_t B     // desired CUDA block size ( <= 1024, multiple of 32)
-                   , const uint32_t N     // length of the input array
+int spScanInc( uint32_t B     // desired CUDA block size ( <= 1024, multiple of 32)
+                   , uint32_t N     // length of the input array
                    , int* h_in            // host input    of size: N * sizeof(int)
                    , int* d_in            // device input  of size: N * sizeof(int)
                    , int* d_out           // device result of size: N * sizeof(int)
                    , uint32_t kernel_version    // scan kernel version
-                   , const uint32_t chunk 
+                   , uint32_t chunk 
                    , int validate     
 ) {
 
@@ -305,7 +305,7 @@ int main (int argc, char * argv[]) {
                         double gigaBytesPerSec = spScanInc<Add<int>>(block_sizes[block_size], n_sizes[n], h_in, d_in, d_out, kernel_versions[kernel], chunk_values[chunk], 0);
 
                         // write result
-                        //results << gigaBytesPerSec << "\n";
+                        results << gigaBytesPerSec << "\n";
 
                     }
                 }

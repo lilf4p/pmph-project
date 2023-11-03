@@ -319,7 +319,7 @@ int main (int argc, char * argv[]) {
                         count++;
                         //printf("======== Bench Run %d =======\n", count);
                         //printf("Configuration: KERNEL=%d, N=%d, B=%d, CHUNK=%d\n", kernel_versions[kernel], n_sizes[n], block_sizes[block_size], CHUNK);
-                        //if (kernel_versions[kernel] == 3) printf("Latest Version of the SPScan Kernel is running...\n");
+                        //if (kernel_versions[kernel] == 4) printf("Latest Version of the SPScan Kernel is running...\n");
                         //else printf("An older version of the SPScan Kernel is running. For the best performance run %s <array-length> <block-size> 3\n", argv[0]);
 
                         // run with current config 
@@ -359,13 +359,13 @@ int main (int argc, char * argv[]) {
             printf("Block size must be a multiple of 32!\n");
             exit(1);
         }
-        if (KERNEL > 3) {
+        if (KERNEL > 4) {
             printf("Kernel version must be one between 0-3\n");
         }
 
         // Info Current Run
         printf("N=%d, B=%d, Kernel Version=%d\n", N, B, KERNEL);
-        if (KERNEL == 3) printf("Latest Version of the SPScan Kernel is running...\n\n");
+        if (KERNEL == 4) printf("Latest Version of the SPScan Kernel is running...\n\n");
         else printf("An older version of the SPScan Kernel is running. For the best performance run %s <array-length> <block-size> 3\n\n", argv[0]);
 
         const size_t mem_size = N*sizeof(int); 

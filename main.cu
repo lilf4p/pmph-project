@@ -75,7 +75,7 @@ int bandwidthCudaMemcpy( const size_t   N     // length of the input array
 
 // Function that benchmark and validate the single pass scan 
 // Return the gigaBytesPerSec of the sps 
-template<class OP, CHUNK>
+template<class OP, uint8_t CHUNK>
 int spScanInc( const uint32_t B     // desired CUDA block size ( <= 1024, multiple of 32)
                    , const uint32_t N     // length of the input array
                    , int* h_in            // host input    of size: N * sizeof(int)
@@ -257,7 +257,7 @@ int main (int argc, char * argv[]) {
     uint32_t N = atoi(argv[2]);
     const uint32_t B = atoi(argv[3]);
     uint32_t KERNEL = atoi(argv[4]);
-    const uint32_t CHUNK = 12;
+    const uint8_t CHUNK = 12;
 
     int* h_in;
     int* d_in;

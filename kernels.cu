@@ -121,7 +121,7 @@ scanIncBlock(volatile typename OP::ElTp* ptr, const unsigned int idx) {
  * `d_in`  is the input  array of length `N`
  */
 
-template<class OP, uint32_t CHUNK>
+template<class OP, uint8_t CHUNK>
 __global__ void
 spScanKernelDepr ( typename OP::ElTp* d_out
                  , typename OP::ElTp* d_in
@@ -222,7 +222,7 @@ spScanKernelDepr ( typename OP::ElTp* d_out
  * `d_in`  is the input  array of length `N`
  */
 
-template<class OP, uint32_t CHUNK>
+template<class OP, uint8_t CHUNK>
 __global__ void
 spScanKernel ( typename OP::ElTp* d_out
              , typename OP::ElTp* d_in
@@ -313,7 +313,7 @@ spScanKernel ( typename OP::ElTp* d_out
     copyFromShr2GlbMem<ElTp, CHUNK>(block_offset, N, d_out, shared_mem);
 }
 
-template<class OP, uint32_t CHUNK>
+template<class OP, uint8_t CHUNK>
 __global__ void
 spLookbackScanKernel ( typename OP::ElTp* d_out
                      , typename OP::ElTp* d_in
@@ -415,7 +415,7 @@ spLookbackScanKernel ( typename OP::ElTp* d_out
     copyFromShr2GlbMem<ElTp, CHUNK>(block_offset, N, d_out, shared_mem);
 }
 
-template<class OP, uint32_t CHUNK>
+template<class OP, uint8_t CHUNK>
 __global__ void
 spWarpLookbackScanKernel ( typename OP::ElTp* d_out
                          , typename OP::ElTp* d_in

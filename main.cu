@@ -62,7 +62,7 @@ int bandwidthCudaMemcpy( const size_t   N     // length of the input array
         timeval_subtract(&t_diff, &t_end, &t_start);
         elapsed = (t_diff.tv_sec*1e6+t_diff.tv_usec) / RUNS_GPU;
         gigaBytesPerSec = 2 * N * sizeof(int) * 1.0e-3f / elapsed;
-        printf("Cuda Memcpy GPU Kernel runs in: %lu microsecs, GB/sec: %.2f\n"
+        printf("Cuda Memcpy GPU Kernel runs in: %lu microsecs, GB/sec: %.2f\n\n"
               , elapsed, gigaBytesPerSec);
     }
  
@@ -86,7 +86,7 @@ int spScanInc( const uint32_t B     // desired CUDA block size ( <= 1024, multip
     cudaMemset(d_out, 0, N*sizeof(int));
 
     // kernel parameters 
-    const uint32_t CHUNK = 12;
+    const uint32_t CHUNK = CHUNK;
     const uint32_t elems_per_block = B * CHUNK;
     const uint32_t num_blocks = (N + elems_per_block - 1) / elems_per_block;
     const uint32_t shared_mem_size = B * sizeof(typename OP::ElTp) * CHUNK;
@@ -150,7 +150,7 @@ int spScanInc( const uint32_t B     // desired CUDA block size ( <= 1024, multip
     timeval_subtract(&t_diff, &t_end, &t_start);
     elapsed = (t_diff.tv_sec*1e6+t_diff.tv_usec) / RUNS_GPU;
     double gigaBytesPerSec = N  * (2*sizeof(int) + sizeof(int)) * 1.0e-3f / elapsed;
-    printf("Scan Inclusive AddI32 GPU Kernel runs in: %lu microsecs, GB/sec: %.2f\n"
+    printf("Single Pass Scan GPU Kernel runs in: %lu microsecs, GB/sec: %.2f\n"
           , elapsed, gigaBytesPerSec);
 
     gpuAssert( cudaPeekAtLastError() );
@@ -171,7 +171,7 @@ int spScanInc( const uint32_t B     // desired CUDA block size ( <= 1024, multip
         timeval_subtract(&t_diff, &t_end, &t_start);
         elapsed = (t_diff.tv_sec*1e6+t_diff.tv_usec) / RUNS_CPU;
         double gigaBytesPerSec = N * (sizeof(int) + sizeof(int)) * 1.0e-3f / elapsed;
-        printf("Scan Inclusive AddI32 CPU Sequential runs in: %lu microsecs, GB/sec: %.2f\n"
+        printf("Scan CPU Sequential runs in: %lu microsecs, GB/sec: %.2f\n"
               , elapsed, gigaBytesPerSec);
     }
 
@@ -192,12 +192,12 @@ int spScanInc( const uint32_t B     // desired CUDA block size ( <= 1024, multip
 
         for(uint32_t i = 0; i<N; i++) {
             if(h_out[i] != h_ref[i]) {
-                printf("!!!INVALID!!!: Scan Inclusive AddI32 at index %d, dev-val: %d, host-val: %d\n"
+                printf("!!!INVALID!!!: Single Pass Scan at index %d, dev-val: %d, host-val: %d\n"
                       , i, h_out[i], h_ref[i]);
                 exit(1);
             }
         }
-        printf("Scan Inclusive AddI32: VALID result!\n\n");
+        printf("Single Pass Scan: VALID result!\n\n");
     }
 
     free(h_out);
@@ -222,7 +222,7 @@ int main (int argc, char * argv[]) {
     const uint32_t N = atoi(argv[1]);
     const uint32_t B = atoi(argv[2]);
     const uint8_t kernel = atoi(argv[3]);
-    printf("N=%d, B=%d, Kernel Version=%d\n", N, B, kernel);
+    printf("N=%d, B=%d, Kernel Version=%d\n\n", N, B, kernel);
 
     const size_t mem_size = N*sizeof(int);
     int* h_in    = (int*) malloc(mem_size);

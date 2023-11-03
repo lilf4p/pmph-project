@@ -6,6 +6,8 @@
 #include "kernels.cu"
 #include "utils.cu"
 
+#define VALIDATE 1
+
 // Measure a more-realistic optimal bandwidth by a simple, memcpy-like kernel 
 int bandwidthMemcpy( const uint32_t B     // desired CUDA block size ( <= 1024, multiple of 32)
                    , const size_t   N     // length of the input array
@@ -155,7 +157,7 @@ int spScanInc( const uint32_t B     // desired CUDA block size ( <= 1024, multip
 
     gpuAssert( cudaPeekAtLastError() );
 
-    { // sequential computation for validation
+    if (VALIDATE) { // sequential computation for validation
         gettimeofday(&t_start, NULL);
         // printf("INPUT:\n");
         for(int i=0; i<RUNS_CPU; i++) {
@@ -173,9 +175,8 @@ int spScanInc( const uint32_t B     // desired CUDA block size ( <= 1024, multip
         double gigaBytesPerSec = N * (sizeof(int) + sizeof(int)) * 1.0e-3f / elapsed;
         printf("Scan CPU Sequential runs in: %lu microsecs, GB/sec: %.2f\n"
               , elapsed, gigaBytesPerSec);
-    }
-
-    { // Validation
+    
+        // Validation
         cudaMemcpy(h_out, d_out, mem_size, cudaMemcpyDeviceToHost);
 
         // printf("REF OUTPUT\n");

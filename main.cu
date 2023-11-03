@@ -286,9 +286,9 @@ int main (int argc, char * argv[]) {
         results.open("benchmarks-sps.csv");
         results << "kernel,input,block,chunk,bandwidth\n";
 
-        for (int kernel = 0; kernel < arrayLength(kernel_versions); kernel++) {
-            for (int n = 0; n < arrayLength(n_sizes); n++) {
-                for (int block_size = 0; block_size < arrayLength(block_sizes); block_size++) {
+        for (int kernel = 0; kernel < num_ker; kernel++) {
+            for (int n = 0; n < num_n; n++) {
+                for (int block_size = 0; block_size < num_block; block_size++) {
                     //for (int c = 0; c < arrayLength(chunk_values); c++) {
                         
                         // write config of first run

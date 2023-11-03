@@ -54,7 +54,7 @@ int bandwidthCudaMemcpy( const size_t   N     // length of the input array
         gettimeofday(&t_start, NULL); 
 
         for(int i=0; i<RUNS_GPU; i++) {
-            cudaMemcpy(d_out, d_in, mem_size, cudaMemcpyDeviceToDevice);
+            cudaMemcpy(d_out, d_in, N, cudaMemcpyDeviceToDevice);
         }
         cudaDeviceSynchronize();
 

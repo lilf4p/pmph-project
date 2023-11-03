@@ -292,7 +292,7 @@ int main (int argc, char * argv[]) {
                     //for (int c = 0; c < arrayLength(chunk_values); c++) {
                         
                         // write config of first run
-                        results << kernel_versions[kernel] << "," << n_sizes[n] << "," << block_sizes[block_size] << "," << CHUNK << ",";
+                        results << kernel_versions[kernel] << "," << n_sizes[n] << "," << block_sizes[block_size] << "," << std::to_string(CHUNK); << ",";
 
                         count++;
                         printf("======== Bench Run %d =======\n", count);

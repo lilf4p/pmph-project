@@ -82,8 +82,8 @@ int spScanInc( const uint32_t B     // desired CUDA block size ( <= 1024, multip
                    , int* d_in            // device input  of size: N * sizeof(int)
                    , int* d_out           // device result of size: N * sizeof(int)
                    , uint32_t kernel_version    // scan kernel version
-                   , uint32_t validate     
                    , const uint32_t chunk 
+                   , int validate     
 ) {
 
     const size_t mem_size = N * sizeof(int);
@@ -302,7 +302,7 @@ int main (int argc, char * argv[]) {
                         initArray(h_in, n_sizes[n], 13);
         
                         // run the single pass scan 
-                        //double gigaBytesPerSec = spScanInc<Add<int>>(block_sizes[block_size], n_sizes[n], h_in, d_in, d_out, kernel_versions[kernel], chunk_values[chunk], 0);
+                        double gigaBytesPerSec = spScanInc<Add<int>>(block_sizes[block_size], n_sizes[n], h_in, d_in, d_out, kernel_versions[kernel], chunk_values[chunk], 0);
 
                         // write result
                         //results << gigaBytesPerSec << "\n";

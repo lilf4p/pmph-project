@@ -36,14 +36,14 @@ int bandwidthMemcpy( const uint32_t B     // desired CUDA block size ( <= 1024, 
         elapsed = (t_diff.tv_sec*1e6+t_diff.tv_usec) / RUNS_GPU;
         gigaBytesPerSec = 2 * N * sizeof(int) * 1.0e-3f / elapsed;
         //printf("Naive Memcpy GPU Kernel runs in: %lu microsecs, GB/sec: %.2f\n"
-              , elapsed, gigaBytesPerSec);
+              //, elapsed, gigaBytesPerSec);
     }
  
     gpuAssert( cudaPeekAtLastError() );
     return gigaBytesPerSec;
 }
 
-// Measure bandwith of Cuda Memcpy device to device
+// Measure bandwidth of Cuda Memcpy device to device
 int bandwidthCudaMemcpy( const size_t   N     // length of the input array
                    , int* d_in            // device input  of length N
                    , int* d_out           // device result of length N
@@ -57,7 +57,7 @@ int bandwidthCudaMemcpy( const size_t   N     // length of the input array
         gettimeofday(&t_start, NULL); 
 
         for(int i=0; i<RUNS_GPU; i++) {
-            cudaMemcpy(d_out, d_in, N, cudaMemcpyDeviceToDevice);
+            cudaMemcpy(d_out, d_in, N, cudaMemcpyDeviceToDevice); // it's right??? bandwidth above hardware limit :/
         }
         cudaDeviceSynchronize();
 
@@ -66,7 +66,7 @@ int bandwidthCudaMemcpy( const size_t   N     // length of the input array
         elapsed = (t_diff.tv_sec*1e6+t_diff.tv_usec) / RUNS_GPU;
         gigaBytesPerSec = 2 * N * sizeof(int) * 1.0e-3f / elapsed;
         //printf("Cuda Memcpy GPU Kernel runs in: %lu microsecs, GB/sec: %.2f\n\n"
-              , elapsed, gigaBytesPerSec);
+              //, elapsed, gigaBytesPerSec);
     }
  
     gpuAssert( cudaPeekAtLastError() );
@@ -186,7 +186,7 @@ int spScanInc( uint32_t B     // desired CUDA block size ( <= 1024, multiple of 
     elapsed = (t_diff.tv_sec*1e6+t_diff.tv_usec) / RUNS_GPU;
     double gigaBytesPerSec = N  * (2*sizeof(int) + sizeof(int)) * 1.0e-3f / elapsed;
     //printf("Single Pass Scan GPU Kernel runs in: %lu microsecs, GB/sec: %.2f\n"
-          , elapsed, gigaBytesPerSec);
+          //, elapsed, gigaBytesPerSec);
 
     gpuAssert( cudaPeekAtLastError() );
     //-------------------------------------//

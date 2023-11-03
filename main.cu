@@ -275,9 +275,9 @@ int main (int argc, char * argv[]) {
         uint32_t block_sizes[] = {128,256,512,1024};
         //const uint32_t chunk_values[] = {1,2,6,10,12,14}; // Do this manually
         
-        num_ker = sizeof(kernel_versions)/sizeof(kernel_versions[0]);
-        num_n = sizeof(n_sizes)/sizeof(n_sizes[0])
-        num_block = sizeof(block_sizes)/sizeof(block_sizes[0]);
+        int num_ker = sizeof(kernel_versions)/sizeof(kernel_versions[0]);
+        int num_n = sizeof(n_sizes)/sizeof(n_sizes[0])
+        int num_block = sizeof(block_sizes)/sizeof(block_sizes[0]);
         printf("Total number of configurations: %d\n", (num_ker*num_n*num_block) );
 
         int count = 0;

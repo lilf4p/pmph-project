@@ -2,6 +2,7 @@
 #define KERNELS
 
 #include <cuda_runtime.h>
+#include <thrust/tuple.h>
 
 #include "utils.cu"
 
@@ -511,10 +512,10 @@ spWarpLookbackScanKernel ( typename OP::ElTp* d_out
         }
 
         if (block_id > 0) {
-            __shared__ ElTp flag_buffer[WARP];
+            __shared__ uint8_t flag_buffer[WARP];
             __shared__ ElTp elem_buffer[WARP];
-            __shared__ volatile uint8_t status; // 0 = redo, 1 = continue, 2 = done
-            __shared__ int32_t prev_block_base_id;
+            __shared__ uint8_t status; // 0 = redo, 1 = continue, 2 = done
+            int32_t prev_block_base_id;
 
             if (thread_id == 0) {
                 prev_block_base_id = block_id - WARP;
@@ -551,6 +552,7 @@ spWarpLookbackScanKernel ( typename OP::ElTp* d_out
                         }
                     }
                 }
+                __syncwarp(); // sync so all threads would see the updated status
 
                 if (status == 1) { // continue WARP loop
                     if (thread_id == 0) {
@@ -563,8 +565,6 @@ spWarpLookbackScanKernel ( typename OP::ElTp* d_out
                     }
                     break;
                 }
-
-                __syncwarp();
             }
         }
     }
@@ -597,6 +597,7 @@ spWarpLookbackScanKernelOpt ( typename OP::ElTp* d_out
                             , uint32_t N
 ) {
     typedef typename OP::ElTp ElTp;
+    typedef typename thrust::pair<uint8_t, ElTp> FV;
 
     extern __shared__ ElTp shared_mem[]; // CHUNK * BLOCK
 
@@ -660,9 +661,8 @@ spWarpLookbackScanKernelOpt ( typename OP::ElTp* d_out
         }
 
         if (block_id > 0) {
-            __shared__ ElTp flag_buffer[WARP];
-            __shared__ ElTp elem_buffer[WARP];
-            __shared__ volatile uint8_t continue_lookback;
+            FV *flagged_values = (FV*) shared_mem;
+            __shared__ uint8_t continue_lookback;
             __shared__ int32_t prev_block_base_id;
 
             if (thread_id == 0) {
@@ -674,23 +674,27 @@ spWarpLookbackScanKernelOpt ( typename OP::ElTp* d_out
                 int32_t prev_block_id = prev_block_base_id + thread_id;
 
                 uint8_t flag = flags[prev_block_id];
-                flag_buffer[thread_id] = flag;
+                ElTp value;
                 if (flag == PRE) {
-                    elem_buffer[thread_id] = prefixes[prev_block_id];
+                    value = prefixes[prev_block_id];
                 } else if (flag == AGG) {
-                    elem_buffer[thread_id] = aggregates[prev_block_id];
+                    value = aggregates[prev_block_id];
                 }
+                flagged_values[thread_id] = thrust::make_pair(flag, value);
 
                 if (thread_id == 0) {
                     int32_t i = WARP-1;
                     while (i >= 0) {
-                        uint8_t flag = flag_buffer[i];
+                        FV fv = flagged_values[i];
+                        uint8_t flag = thrust::get<0>(fv);
+                        ElTp value = thrust::get<1>(fv);
+
                         if (flag == PRE) { // found the first prefix, time to stop both the inner and the main loops
-                            prev_block_prefix = OP::apply(elem_buffer[i], prev_block_prefix);
+                            prev_block_prefix = OP::apply(value, prev_block_prefix);
                             continue_lookback = 0;
                             break;
                         } else if (flag == AGG) { // found another agg, continue the inner loop
-                            prev_block_prefix = OP::apply(elem_buffer[i], prev_block_prefix);
+                            prev_block_prefix = OP::apply(value, prev_block_prefix);
                         } else { // it's empty, stop the inner loop and continue the main loop
                             break;
                         }
@@ -699,12 +703,11 @@ spWarpLookbackScanKernelOpt ( typename OP::ElTp* d_out
                     i++; // add 1 back (to compensate for "i = WARP-1")
                     prev_block_base_id -= WARP - i;
                 }
+                __syncwarp(); // sync so all threads would see the updated prev_block_base_id and continue_lookback
 
                 if (continue_lookback == 0) { // stop the main loop
                     break;
                 }
-
-                __syncwarp();
             }
         }
     }

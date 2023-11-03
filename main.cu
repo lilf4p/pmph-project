@@ -290,10 +290,10 @@ int main (int argc, char * argv[]) {
         std::ofstream results;
         results.open("benchmarks-sps.csv");
         results << "kernel,input,block,chunk,bandwidth\n";
-
+        std::ofstream naive_memcpy_res;
         naive_memcpy_res.open("naive-memcpy.csv");
         naive_memcpy_res << "input,block,bandwidth\n";
-
+        std::ofstream cuda_memcpy_res;
         cuda_memcpy_res.open("cuda-memcpy.csv");
         cuda_memcpy_res << "input,bandwidth\n";
 

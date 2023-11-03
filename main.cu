@@ -273,7 +273,7 @@ int main (int argc, char * argv[]) {
     uint32_t KERNEL = atoi(argv[4]);
     
     // Constant value 
-    const uint8_t CHUNK = 1;
+    const uint8_t CHUNK = 15;
 
     int* h_in;
     int* d_in;

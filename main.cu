@@ -75,14 +75,13 @@ int bandwidthCudaMemcpy( const size_t   N     // length of the input array
 
 // Function that benchmark and validate the single pass scan 
 // Return the gigaBytesPerSec of the sps 
-template<class OP>
+template<class OP, CHUNK>
 int spScanInc( const uint32_t B     // desired CUDA block size ( <= 1024, multiple of 32)
                    , const uint32_t N     // length of the input array
                    , int* h_in            // host input    of size: N * sizeof(int)
                    , int* d_in            // device input  of size: N * sizeof(int)
                    , int* d_out           // device result of size: N * sizeof(int)
                    , uint32_t kernel_version    // scan kernel version
-                   , const uint32_t chunk 
                    , int validate     
 ) {
 
@@ -92,7 +91,6 @@ int spScanInc( const uint32_t B     // desired CUDA block size ( <= 1024, multip
     cudaMemset(d_out, 0, N*sizeof(int));
 
     // kernel parameters 
-    const uint32_t CHUNK = chunk;
     const uint32_t elems_per_block = B * CHUNK;
     const uint32_t num_blocks = (N + elems_per_block - 1) / elems_per_block;
     const uint32_t shared_mem_size = B * sizeof(typename OP::ElTp) * CHUNK;
@@ -344,7 +342,7 @@ int main (int argc, char * argv[]) {
         bandwidthCudaMemcpy(mem_size, d_in, d_out);
         
         // run the single pass scan 
-        spScanInc<Add<int>>(B, N, h_in, d_in, d_out, KERNEL, CHUNK, 1);
+        spScanInc<Add<int>, CHUNK>(B, N, h_in, d_in, d_out, KERNEL, 1);
 
     }
 

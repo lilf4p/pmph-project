@@ -267,7 +267,7 @@ int main (int argc, char * argv[]) {
 
     if (BENCHMARK) {
 
-        printf("==== Benchmark ====");
+        printf("==== Benchmark ====\n");
         
         // Try different configuration
         uint32_t kernel_versions[] = {2,3};
@@ -276,7 +276,7 @@ int main (int argc, char * argv[]) {
         //const uint32_t chunk_values[] = {1,2,6,10,12,14}; // Do this manually
 
         printf("Num Kernel: %d\n", arrayLength(kernel_versions));
-        printf("Num N: %d\n", arrayLength(n_sizes));
+        printf("Num N: %d\n", sizeof(n_sizes)/sizeof(n_sizes[0]));
         printf("Num Block: %d\n", arrayLength(block_sizes));
 
         int count = 0;

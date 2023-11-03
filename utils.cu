@@ -139,7 +139,7 @@ void log2UB(uint32_t n, uint32_t* ub, uint32_t* lg) {
     *lg = r;
 }
 
-int arrayLength (uint32_t * array) {
+int arrayLength (uint32_t array[]) {
     if (array != NULL) return sizeof(array) / sizeof(array[0]);
     else return 0;
 }

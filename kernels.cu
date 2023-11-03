@@ -2,8 +2,11 @@
 #define KERNELS
 
 #include <cuda_runtime.h>
+#include <thrust/tuple.h>
 
 #include "utils.cu"
+
+// -------------------------------------//
 
 //---------- UTILITY KERNEL ----------//
 // The kernel naiveMemcpy, copyFromGlb2ShrMem, copyFromShr2GlbMem, scanIncWarp,
@@ -421,7 +424,7 @@ spWarpLookbackScanKernel ( typename OP::ElTp* d_out
                          , typename OP::ElTp* d_in
                          , volatile typename OP::ElTp* aggregates
                          , volatile typename OP::ElTp* prefixes
-                         , volatile uint8_t* flags // <- initialize all elements with INC flag
+                         , volatile uint8_t* flags
                          , volatile uint32_t* dyn_block_id
                          , uint32_t N
 ) {
@@ -489,10 +492,10 @@ spWarpLookbackScanKernel ( typename OP::ElTp* d_out
         }
 
         if (block_id > 0) {
-            __shared__ ElTp flag_buffer[WARP];
+            __shared__ uint8_t flag_buffer[WARP];
             __shared__ ElTp elem_buffer[WARP];
-            __shared__ volatile uint8_t status; // 0 = redo, 1 = continue, 2 = done
-            __shared__ int32_t prev_block_base_id;
+            __shared__ uint8_t status; // 0 = redo, 1 = continue, 2 = done
+            int32_t prev_block_base_id;
 
             if (thread_id == 0) {
                 prev_block_base_id = block_id - WARP;
@@ -506,8 +509,6 @@ spWarpLookbackScanKernel ( typename OP::ElTp* d_out
                     elem_buffer[thread_id] = prefixes[prev_block_id];
                 } else if (flag == AGG) {
                     elem_buffer[thread_id] = aggregates[prev_block_id];
-                } else { // can be removed
-                    elem_buffer[thread_id] = OP::identity();
                 }
 
                 flag_buffer[thread_id] = flag;
@@ -531,6 +532,7 @@ spWarpLookbackScanKernel ( typename OP::ElTp* d_out
                         }
                     }
                 }
+                __syncwarp(); // sync so all threads would see the updated status
 
                 if (status == 1) { // continue WARP loop
                     if (thread_id == 0) {
@@ -543,8 +545,149 @@ spWarpLookbackScanKernel ( typename OP::ElTp* d_out
                     }
                     break;
                 }
+            }
+        }
+    }
+    __syncthreads();
 
-                __syncwarp();
+    if (thread_id == blockDim.x-1) {
+        prefixes[block_id] = OP::apply(prev_block_prefix, agg);
+        __threadfence();
+        flags[block_id] = PRE;
+    }
+
+    ElTp prev_total_prefix = OP::apply(prev_block_prefix, prev_chunk_prefix);
+    for (uint32_t i = 0; i < CHUNK; i++) {
+        shared_mem[shared_mem_offset + i] = OP::apply(prev_total_prefix, chunk[i]);
+    }
+    __syncthreads();
+
+    // 5. write back from shared to global memory in coalesced fashion.
+    copyFromShr2GlbMem<ElTp, CHUNK>(block_offset, N, d_out, shared_mem);
+}
+
+template<class OP, uint8_t CHUNK>
+__global__ void
+spWarpLookbackScanKernelOpt ( typename OP::ElTp* d_out
+                            , typename OP::ElTp* d_in
+                            , volatile typename OP::ElTp* aggregates
+                            , volatile typename OP::ElTp* prefixes
+                            , volatile uint8_t* flags
+                            , volatile uint32_t* dyn_block_id
+                            , uint32_t N
+) {
+    typedef typename OP::ElTp ElTp;
+    typedef typename thrust::pair<uint8_t, ElTp> FV;
+
+    extern __shared__ ElTp shared_mem[]; // CHUNK * BLOCK
+
+    __shared__ uint32_t tmp_block_id;
+    if (threadIdx.x == 0) {
+        tmp_block_id = atomicAdd((uint32_t*)dyn_block_id, 1);
+    }
+    __syncthreads();
+
+    uint32_t thread_id = threadIdx.x;
+    uint32_t block_id = tmp_block_id;
+    uint32_t block_offset = CHUNK * blockDim.x  * block_id;
+
+    // register memory for storing the scanned elements.
+    ElTp chunk[CHUNK];
+
+    // // 1. copy `CHUNK` input elements per thread from global to shared memory
+    copyFromGlb2ShrMem<ElTp, CHUNK>(block_offset, N, OP::identInp(), d_in, shared_mem);
+
+    // // 2. each thread sequentially reduces its `CHUNK` elements, result is stored in `tmp`
+    ElTp tmp = OP::identity();
+    uint32_t shared_mem_offset = thread_id * CHUNK;
+    #pragma unroll
+    for (uint32_t i = 0; i < CHUNK; i++) {
+        ElTp elm = shared_mem[shared_mem_offset + i];
+        tmp = OP::apply(tmp, elm);
+        chunk[i] = tmp;
+    }
+    __syncthreads();
+
+    // 3. Each thread publishes in shared memory the reduced result of its `CHUNK` elements
+    shared_mem[thread_id] = tmp;
+    __syncthreads();
+
+    // 4. perform an intra-CUDA-block scan
+    ElTp agg = scanIncBlock<OP>(shared_mem, thread_id);
+    __syncthreads();
+    if (thread_id == blockDim.x -1) {
+        if (block_id > 0) {
+            aggregates[block_id] = agg;
+            __threadfence();
+            flags[block_id] = AGG;
+        } else {
+            prefixes[block_id] = agg;
+            __threadfence();
+            flags[block_id] = PRE;
+        }
+    }
+    __syncthreads();
+
+    ElTp prev_chunk_prefix = OP::identity();
+    if (thread_id > 0) {
+        prev_chunk_prefix = shared_mem[thread_id-1];
+    }
+    __syncthreads();
+
+    __shared__ ElTp prev_block_prefix;
+    if (thread_id < 32) {
+        if (thread_id == 0) {
+            prev_block_prefix = OP::identity();
+        }
+
+        if (block_id > 0) {
+            FV *flagged_values = (FV*) shared_mem;
+            __shared__ uint8_t continue_lookback;
+            __shared__ int32_t prev_block_base_id;
+
+            if (thread_id == 0) {
+                prev_block_base_id = block_id - WARP;
+                continue_lookback = 1;
+            }
+
+            while (true) {
+                int32_t prev_block_id = prev_block_base_id + thread_id;
+
+                uint8_t flag = flags[prev_block_id];
+                ElTp value;
+                if (flag == PRE) {
+                    value = prefixes[prev_block_id];
+                } else if (flag == AGG) {
+                    value = aggregates[prev_block_id];
+                }
+                flagged_values[thread_id] = thrust::make_pair(flag, value);
+
+                if (thread_id == 0) {
+                    int32_t i = WARP-1;
+                    while (i >= 0) {
+                        FV fv = flagged_values[i];
+                        uint8_t flag = thrust::get<0>(fv);
+                        ElTp value = thrust::get<1>(fv);
+
+                        if (flag == PRE) { // found the first prefix, time to stop both the inner and the main loops
+                            prev_block_prefix = OP::apply(value, prev_block_prefix);
+                            continue_lookback = 0;
+                            break;
+                        } else if (flag == AGG) { // found another agg, continue the inner loop
+                            prev_block_prefix = OP::apply(value, prev_block_prefix);
+                        } else { // it's empty, stop the inner loop and continue the main loop
+                            break;
+                        }
+                        i--;
+                    }
+                    i++; // add 1 back (to compensate for "i = WARP-1")
+                    prev_block_base_id -= WARP - i;
+                }
+                __syncwarp(); // sync so all threads would see the updated prev_block_base_id and continue_lookback
+
+                if (continue_lookback == 0) { // stop the main loop
+                    break;
+                }
             }
         }
     }

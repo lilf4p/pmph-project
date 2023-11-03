@@ -277,7 +277,7 @@ int main (int argc, char * argv[]) {
         // Try different configuration
         uint32_t kernel_versions[] = {2,3};
         uint32_t n_sizes[] = {1024, 221184, 1000000, 10000000, 100003565}; 
-        uint32_t block_sizes[] = {128,256,512,1024};
+        uint32_t block_sizes[] = {64,128,256,512,1024};
         //const uint32_t chunk_values[] = {1,2,6,10,12,14}; // Do this manually
         
         int num_ker = sizeof(kernel_versions)/sizeof(kernel_versions[0]);
@@ -288,13 +288,13 @@ int main (int argc, char * argv[]) {
         int count = 0;
 
         std::ofstream results;
-        results.open("benchmarks-sps.csv");
+        results.open("bench-sps.csv");
         results << "kernel,input,block,chunk,bandwidth\n";
         std::ofstream naive_memcpy_res;
-        naive_memcpy_res.open("naive-memcpy.csv");
+        naive_memcpy_res.open("bench-naiveMemcpy.csv");
         naive_memcpy_res << "input,block,bandwidth\n";
         std::ofstream cuda_memcpy_res;
-        cuda_memcpy_res.open("cuda-memcpy.csv");
+        cuda_memcpy_res.open("bench-cudaMemcpy.csv");
         cuda_memcpy_res << "input,bandwidth\n";
 
         for (int kernel = 0; kernel < num_ker; kernel++) {

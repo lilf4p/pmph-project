@@ -131,6 +131,9 @@ int spScanInc( uint32_t B     // desired CUDA block size ( <= 1024, multiple of 
         case 3: 
             spWarpLookbackScanKernel<OP, CHUNK><<<num_blocks, B, shared_mem_size>>>(d_out, d_in, aggregates, prefixes, flags, dyn_block_id, N);
             break;
+        case 4: 
+            spWarpLookbackScanKernelOpt<OP, CHUNK><<<num_blocks, B, shared_mem_size>>>(d_out, d_in, aggregates, prefixes, flags, dyn_block_id, N);
+            break;
         default:
             printf("Kernel Version must be a value between 0-4\n");
             printf("<kernel-version>:\n"
@@ -169,6 +172,9 @@ int spScanInc( uint32_t B     // desired CUDA block size ( <= 1024, multiple of 
             break;
         case 3: 
             spWarpLookbackScanKernel<OP, CHUNK><<<num_blocks, B, shared_mem_size>>>(d_out, d_in, aggregates, prefixes, flags, dyn_block_id, N);
+            break;
+        case 4: 
+            spWarpLookbackScanKernelOpt<OP, CHUNK><<<num_blocks, B, shared_mem_size>>>(d_out, d_in, aggregates, prefixes, flags, dyn_block_id, N);
             break;
         default:
             printf("Kernel Version must be a value between 0-4\n");

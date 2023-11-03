@@ -94,7 +94,7 @@ int spScanInc( uint32_t B     // desired CUDA block size ( <= 1024, multiple of 
     const uint32_t elems_per_block = B * CHUNK;
     const uint32_t num_blocks = (N + elems_per_block - 1) / elems_per_block;
     const uint32_t shared_mem_size = B * sizeof(typename OP::ElTp) * CHUNK;
-    printf("elems_per_block=%d, CHUNK=%d, num_blocks=%d, shmem_size=%d\n", elems_per_block, CHUNK, num_blocks, shared_mem_size);
+    //printf("elems_per_block=%d, CHUNK=%d, num_blocks=%d, shmem_size=%d\n", elems_per_block, CHUNK, num_blocks, shared_mem_size);
 
     // mallocs 
     typename OP::ElTp* aggregates;
@@ -266,12 +266,18 @@ int main (int argc, char * argv[]) {
     int* d_out;
 
     if (BENCHMARK) {
+
+        printf("==== Benchmark ====");
         
         // Try different configuration
-        const uint32_t kernel_versions[] = {2,3};
-        const uint32_t n_sizes[] = {1024, 221184, 1000000, 10000000, 100003565}; 
-        const uint32_t block_sizes[] = {128,256,512,1024};
+        const int kernel_versions[] = {2,3};
+        const int n_sizes[] = {1024, 221184, 1000000, 10000000, 100003565}; 
+        const int block_sizes[] = {128,256,512,1024};
         //const uint32_t chunk_values[] = {1,2,6,10,12,14}; // Do this manually
+
+        printf("Num Kernel: %d\n", arrayLength(kernel_versions));
+        printf("Num N: %d\n", arrayLength(n_sizes));
+        printf("Num Block: %d\n", arrayLength(block_sizes));
 
         int count = 0;
 
@@ -290,8 +296,8 @@ int main (int argc, char * argv[]) {
                         count++;
                         printf("======== Bench Run %d =======\n", count);
                         printf("Configuration: KERNEL=%d, N=%d, B=%d, CHUNK=%d\n", kernel_versions[kernel], n_sizes[n], block_sizes[block_size], CHUNK);
-                        if (kernel_versions[kernel] == 3) printf("Latest Version of the SPScan Kernel is running...\n\n");
-                        else printf("An older version of the SPScan Kernel is running. For the best performance run %s <array-length> <block-size> 3\n\n", argv[0]);
+                        if (kernel_versions[kernel] == 3) printf("Latest Version of the SPScan Kernel is running...\n");
+                        else printf("An older version of the SPScan Kernel is running. For the best performance run %s <array-length> <block-size> 3\n", argv[0]);
 
                         // run with current config 
                         const size_t mem_size = n_sizes[n]*sizeof(int);
@@ -306,6 +312,8 @@ int main (int argc, char * argv[]) {
 
                         // write result
                         results << gigaBytesPerSec << "\n";
+
+                        printf("==================");
 
                     //}
                 }

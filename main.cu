@@ -40,12 +40,42 @@ int bandwidthMemcpy( const uint32_t B     // desired CUDA block size ( <= 1024, 
     return 0;
 }
 
+// Measure bandwith of Cuda Memcpy device to device
+int bandwidthCudaMemcpy( const size_t   N     // length of the input array
+                   , int* d_in            // device input  of length N
+                   , int* d_out           // device result of length N
+) {
+
+    double gigaBytesPerSec;
+    unsigned long int elapsed;
+    struct timeval t_start, t_end, t_diff;
+
+    {
+        gettimeofday(&t_start, NULL); 
+
+        for(int i=0; i<RUNS_GPU; i++) {
+            cudaMemcpy(d_out, d_in, mem_size, cudaMemcpyDeviceToDevice);
+        }
+        cudaDeviceSynchronize();
+
+        gettimeofday(&t_end, NULL);
+        timeval_subtract(&t_diff, &t_end, &t_start);
+        elapsed = (t_diff.tv_sec*1e6+t_diff.tv_usec) / RUNS_GPU;
+        gigaBytesPerSec = 2 * N * sizeof(int) * 1.0e-3f / elapsed;
+        printf("Cuda Memcpy GPU Kernel runs in: %lu microsecs, GB/sec: %.2f\n"
+              , elapsed, gigaBytesPerSec);
+    }
+ 
+    gpuAssert( cudaPeekAtLastError() );
+    return 0;
+}
+
 // Function that benchmark and validate the single pass scan 
 template<class OP>
 int spScanInc( const uint32_t B     // desired CUDA block size ( <= 1024, multiple of 32)
                    , const size_t   N     // length of the input array
                    , int* h_in            // host input    of size: N * sizeof(int)
-                   , int* d_in            // device input  of size: N * sizeof(ElTp)
+                   , int* d_in            // device input  of size: N * sizeof(int)
                    , int* d_out           // device result of size: N * sizeof(int)
                    , uint8_t kernel_version    // scan kernel version
 ) {
@@ -88,6 +118,8 @@ int spScanInc( const uint32_t B     // desired CUDA block size ( <= 1024, multip
         // reset before every execution
         cudaMemset(flags, INC, num_blocks * sizeof(uint8_t));
         cudaMemset(dyn_block_id, 0, sizeof(uint32_t));
+
+        // choose which version of the kernel to run
         switch (kernel_version)
         {
         case 0:
@@ -123,7 +155,7 @@ int spScanInc( const uint32_t B     // desired CUDA block size ( <= 1024, multip
 
     gpuAssert( cudaPeekAtLastError() );
 
-    { // sequential computation
+    { // sequential computation for validation
         gettimeofday(&t_start, NULL);
         // printf("INPUT:\n");
         for(int i=0; i<RUNS_CPU; i++) {
@@ -204,25 +236,10 @@ int main (int argc, char * argv[]) {
 
     // computing a "realistic/achievable" bandwidth figure
     bandwidthMemcpy(B, N, d_in, d_out);
-
-    double gigaBytesPerSec;
-    unsigned long int elapsed;
-    struct timeval t_start, t_end, t_diff;
-    // Baseline cuda memcpy
-    { 
-        gettimeofday(&t_start, NULL); 
-        for(int i=0; i<RUNS_GPU; i++) {
-            cudaMemcpy(d_out, d_in, mem_size, cudaMemcpyDeviceToDevice);
-
-        }
-        gettimeofday(&t_end, NULL);
-        timeval_subtract(&t_diff, &t_end, &t_start);
-        elapsed = (t_diff.tv_sec*1e6+t_diff.tv_usec) / RUNS_GPU;
-        gigaBytesPerSec = 2 * N * sizeof(int) * 1.0e-3f / elapsed;
-        printf("Baseline Cuda Memcpy runs in: %lu microsecs, GB/sec: %.2f\n\n"
-              , elapsed, gigaBytesPerSec);
-    }
-
+    
+    // Cuda memcpy bandwidth
+    bandwidthCudaMemcpy(N, d_in, d_out);
+    
     // run the single pass scan 
     spScanInc<Add<int>>(B, N, h_in, d_in, d_out, kernel);
 

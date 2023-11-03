@@ -86,11 +86,11 @@ int spScanInc( const uint32_t B     // desired CUDA block size ( <= 1024, multip
     cudaMemset(d_out, 0, N*sizeof(int));
 
     // kernel parameters 
-    const uint32_t CHUNK = CHUNK;
-    const uint32_t elems_per_block = B * CHUNK;
+    const uint32_t chunk = CHUNK;
+    const uint32_t elems_per_block = B * chunk;
     const uint32_t num_blocks = (N + elems_per_block - 1) / elems_per_block;
-    const uint32_t shared_mem_size = B * sizeof(typename OP::ElTp) * CHUNK;
-    printf("elems_per_block=%d, CHUNK=%d, num_blocks=%d, shmem_size=%d\n", elems_per_block, CHUNK, num_blocks, shared_mem_size);
+    const uint32_t shared_mem_size = B * sizeof(typename OP::ElTp) * chunk;
+    printf("elems_per_block=%d, CHUNK=%d, num_blocks=%d, shmem_size=%d\n", elems_per_block, chunk, num_blocks, shared_mem_size);
 
     // mallocs 
     typename OP::ElTp* aggregates;
@@ -106,7 +106,7 @@ int spScanInc( const uint32_t B     // desired CUDA block size ( <= 1024, multip
     // dry run to exercise d_tmp allocation
     cudaMemset(flags, INC, num_blocks * sizeof(uint8_t));
     cudaMemset(dyn_block_id, 0, sizeof(uint32_t));
-    spLookbackScanKernel<OP, CHUNK><<<num_blocks, B, shared_mem_size>>>(d_out, d_in, aggregates, prefixes, flags, dyn_block_id, N);
+    spLookbackScanKernel<OP, chunk><<<num_blocks, B, shared_mem_size>>>(d_out, d_in, aggregates, prefixes, flags, dyn_block_id, N);
 
     // time the GPU computation
     unsigned long int elapsed;
@@ -123,16 +123,16 @@ int spScanInc( const uint32_t B     // desired CUDA block size ( <= 1024, multip
         switch (kernel_version)
         {
         case 0:
-            spScanKernelDepr<OP, CHUNK><<<num_blocks, B, shared_mem_size>>>(d_out, d_in, aggregates, prefixes, flags, dyn_block_id, N);
+            spScanKernelDepr<OP, chunk><<<num_blocks, B, shared_mem_size>>>(d_out, d_in, aggregates, prefixes, flags, dyn_block_id, N);
             break;
         case 1:
-            spScanKernel<OP, CHUNK><<<num_blocks, B, shared_mem_size>>>(d_out, d_in, aggregates, prefixes, flags, dyn_block_id, N);
+            spScanKernel<OP, chunk><<<num_blocks, B, shared_mem_size>>>(d_out, d_in, aggregates, prefixes, flags, dyn_block_id, N);
             break;
         case 2: 
-            spLookbackScanKernel<OP, CHUNK><<<num_blocks, B, shared_mem_size>>>(d_out, d_in, aggregates, prefixes, flags, dyn_block_id, N);
+            spLookbackScanKernel<OP, chunk><<<num_blocks, B, shared_mem_size>>>(d_out, d_in, aggregates, prefixes, flags, dyn_block_id, N);
             break;
         case 3: 
-            spWarpLookbackScanKernel<OP, CHUNK><<<num_blocks, B, shared_mem_size>>>(d_out, d_in, aggregates, prefixes, flags, dyn_block_id, N);
+            spWarpLookbackScanKernel<OP, chunk><<<num_blocks, B, shared_mem_size>>>(d_out, d_in, aggregates, prefixes, flags, dyn_block_id, N);
             break;
         default:
             printf("Kernel Version must be a value between 0-3\n");

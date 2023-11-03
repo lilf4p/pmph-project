@@ -6,7 +6,8 @@
 #include "kernels.cu"
 #include "utils.cu"
 
-#define VALIDATE 1
+#include <iostream>
+#include <fstream>
 
 // Measure a more-realistic optimal bandwidth by a simple, memcpy-like kernel 
 int bandwidthMemcpy( const uint32_t B     // desired CUDA block size ( <= 1024, multiple of 32)
@@ -73,6 +74,7 @@ int bandwidthCudaMemcpy( const size_t   N     // length of the input array
 }
 
 // Function that benchmark and validate the single pass scan 
+// Return the gigaBytesPerSec of the sps 
 template<class OP>
 int spScanInc( const uint32_t B     // desired CUDA block size ( <= 1024, multiple of 32)
                    , const size_t   N     // length of the input array
@@ -80,6 +82,8 @@ int spScanInc( const uint32_t B     // desired CUDA block size ( <= 1024, multip
                    , int* d_in            // device input  of size: N * sizeof(int)
                    , int* d_out           // device result of size: N * sizeof(int)
                    , uint8_t kernel_version    // scan kernel version
+                   , uint8_t validate     
+                   , const uint32_t chunk 
 ) {
 
     const size_t mem_size = N * sizeof(int);
@@ -88,7 +92,7 @@ int spScanInc( const uint32_t B     // desired CUDA block size ( <= 1024, multip
     cudaMemset(d_out, 0, N*sizeof(int));
 
     // kernel parameters 
-    const uint32_t CHUNK = CHUNK_VALUE;
+    const uint32_t CHUNK = chunk;
     const uint32_t elems_per_block = B * CHUNK;
     const uint32_t num_blocks = (N + elems_per_block - 1) / elems_per_block;
     const uint32_t shared_mem_size = B * sizeof(typename OP::ElTp) * CHUNK;
@@ -105,12 +109,38 @@ int spScanInc( const uint32_t B     // desired CUDA block size ( <= 1024, multip
     cudaMalloc((void**)&flags, num_blocks*sizeof( uint8_t ));
     cudaMalloc((void**)&dyn_block_id, sizeof( uint32_t ));
 
-    // dry run to exercise d_tmp allocation
-    cudaMemset(flags, INC, num_blocks * sizeof(uint8_t));
-    cudaMemset(dyn_block_id, 0, sizeof(uint32_t));
-    spLookbackScanKernel<OP, CHUNK><<<num_blocks, B, shared_mem_size>>>(d_out, d_in, aggregates, prefixes, flags, dyn_block_id, N);
+    // ------- 10 dry run to exercise d_tmp allocation ------- //
+    for (int i=0; i<10; i++) {
+        cudaMemset(flags, INC, num_blocks * sizeof(uint8_t));
+        cudaMemset(dyn_block_id, 0, sizeof(uint32_t));
+        // choose which version of the kernel to run
+        switch (kernel_version)
+        {
+        case 0:
+            spScanKernelDepr<OP, CHUNK><<<num_blocks, B, shared_mem_size>>>(d_out, d_in, aggregates, prefixes, flags, dyn_block_id, N);
+            break;
+        case 1:
+            spScanKernel<OP, CHUNK><<<num_blocks, B, shared_mem_size>>>(d_out, d_in, aggregates, prefixes, flags, dyn_block_id, N);
+            break;
+        case 2: 
+            spLookbackScanKernel<OP, CHUNK><<<num_blocks, B, shared_mem_size>>>(d_out, d_in, aggregates, prefixes, flags, dyn_block_id, N);
+            break;
+        case 3: 
+            spWarpLookbackScanKernel<OP, CHUNK><<<num_blocks, B, shared_mem_size>>>(d_out, d_in, aggregates, prefixes, flags, dyn_block_id, N);
+            break;
+        default:
+            printf("Kernel Version must be a value between 0-3\n");
+            printf("<kernel-version>:\n"
+            "    - 0: Naive implementation that uses global memory (spScanKernelDepr)\n"
+            "    - 1: Without loopback (spScanKernel)\n"
+            "    - 2: Single thread Loopback (spLookbackScanKernel)\n"
+            "    - 3: Warp Loopback (spWarpLookbackScanKernel)\n\n");            
+            exit(1);
+        }
+    }
+    // ------------------------------ //
 
-    // time the GPU computation
+    // ---------- Time the GPU computation---------- //
     unsigned long int elapsed;
     struct timeval t_start, t_end, t_diff;
     gettimeofday(&t_start, NULL); 
@@ -156,8 +186,10 @@ int spScanInc( const uint32_t B     // desired CUDA block size ( <= 1024, multip
           , elapsed, gigaBytesPerSec);
 
     gpuAssert( cudaPeekAtLastError() );
+    //-------------------------------------//
 
-    if (VALIDATE) { // sequential computation for validation
+    // ---------- Sequential computation for validation --------------- //
+    if (validate) { 
         gettimeofday(&t_start, NULL);
         // printf("INPUT:\n");
         for(int i=0; i<RUNS_CPU; i++) {
@@ -176,7 +208,6 @@ int spScanInc( const uint32_t B     // desired CUDA block size ( <= 1024, multip
         printf("Scan CPU Sequential runs in: %lu microsecs, GB/sec: %.2f\n"
               , elapsed, gigaBytesPerSec);
     
-        // Validation
         cudaMemcpy(h_out, d_out, mem_size, cudaMemcpyDeviceToHost);
 
         // printf("REF OUTPUT\n");
@@ -199,17 +230,20 @@ int spScanInc( const uint32_t B     // desired CUDA block size ( <= 1024, multip
             }
         }
         printf("Single Pass Scan: VALID result!\n\n");
+        // --------------------------------------- //
     }
 
     free(h_out);
     free(h_ref);
 
-    return 0;
+    // return bandwidth of sps 
+    return gigaBytesPerSec;
 }
 
 int main (int argc, char * argv[]) {
-    if (argc != 4) {
-        printf("Usage: %s <array-length> <block-size> <kernel-version>\n", argv[0]);
+
+    if (argc != 5) {
+        printf("Usage: %s <benchmark> <array-length> <block-size> <kernel-version>\n", argv[0]);
         printf("<kernel-version>:\n"
         "    - 0: Naive implementation that uses global memory (spScanKernelDepr)\n"
         "    - 1: Without loopback (spScanKernel)\n"
@@ -220,39 +254,112 @@ int main (int argc, char * argv[]) {
 
     initHwd();
 
-    const uint32_t N = atoi(argv[1]);
-    const uint32_t B = atoi(argv[2]);
+    // Configuration from main call 
+    const uint8_t BENCHMARK = atoi(argv[1]);
+    const uint32_t N = atoi(argv[2]);
+    const uint32_t B = atoi(argv[3]);
+    const uint8_t kernel = atoi(argv[4]);
+    const uint32_t chunk = 12;
 
-    // block size must be a multiple of 32
-    if (B % 32 != 0) {
-        printf("Block size must be a multiple of 32!\n");
-        exit(1);
+    if (BENCHMARK) {
+        
+        // Try different configuration
+        const uint32_t kernel_versions = {2,3};
+        const uint32_t n_sizes = {1024, 221184, 1000000, 10000000, 100003565}; 
+        const uint32_t block_sizes = {128,256,512,1024};
+        const uint32_t chunk_values = {1,2,6,10,12,14};
+
+        int count = 0;
+
+        std::ofstream results;
+        results.open("benchmarks-sps.csv");
+        results << "kernel,input,block,chunk,bandwidth\n";
+
+        for (int kernel = 0; kernel < arrayLength(kernel_versions); kernel++) {
+            for (int n = 0; n < arrayLength(n_sizes); n++) {
+                for (int block_size = 0; block_size < arrayLength(block_sizes); block_size++) {
+                    for (int chunk = 0; chunk < arrayLength; chunk++) {
+                        
+                        // write config of first run
+                        results << kernel << "," << n << "," << block_size << "," << chunk << ",";
+
+                        count++;
+                        printf("======== Bench Run %d =======\n", count);
+                        printf("Configuration: Kernel=%d, N=%d, B=%d, CHUNK=%d\n", kernel, n, block_size, chunk);
+                        if (kernel == 3) printf("Latest Version of the SPScan Kernel is running...\n\n");
+                        else printf("An older version of the SPScan Kernel is running. For the best performance run %s <array-length> <block-size> 3\n\n", argv[0]);
+
+                        // run with current config 
+                        const size_t mem_size = n*sizeof(int);
+                        int* h_in    = (int*) malloc(mem_size);
+                        int* d_in;
+                        int* d_out;
+                        cudaMalloc((void**)&d_in ,   mem_size);
+                        cudaMalloc((void**)&d_out,   mem_size);
+
+                        initArray(h_in, n, 13);
+        
+                        // run the single pass scan 
+                        double gigaBytesPerSec = spScanInc<Add<int>>(block_size, n, h_in, d_in, d_out, kernel, chunk, 0);
+
+                        // write result
+                        results << gigaBytesPerSec << "\n";
+
+                    }
+                }
+            }
+        }
+        results.close();
+
+    } else {
+
+        // Check parameters
+        if (B % 32 != 0) {
+            printf("Block size must be a multiple of 32!\n");
+            exit(1);
+        }
+        if (kernel > 3) {
+            printf("Kernel version must be one between 0-3\n");
+        }
+
+        // Check parameters
+        if (B % 32 != 0) {
+            printf("Block size must be a multiple of 32!\n");
+            exit(1);
+        }
+        if (kernel > 3) {
+            printf("Kernel version must be one between 0-3\n");
+        }
+
+        // Info Current Run
+        printf("N=%d, B=%d, Kernel Version=%d\n", N, B, kernel);
+        if (kernel == 3) printf("Latest Version of the SPScan Kernel is running...\n\n");
+        else printf("An older version of the SPScan Kernel is running. For the best performance run %s <array-length> <block-size> 3\n\n", argv[0]);
+
+        const size_t mem_size = N*sizeof(int);
+        int* h_in    = (int*) malloc(mem_size);
+        int* d_in;
+        int* d_out;
+        cudaMalloc((void**)&d_in ,   mem_size);
+        cudaMalloc((void**)&d_out,   mem_size);
+
+        initArray(h_in, N, 13);
+        cudaMemcpy(d_in, h_in, mem_size, cudaMemcpyHostToDevice);
+
+        // computing a "realistic/achievable" bandwidth figure
+        bandwidthMemcpy(B, N, d_in, d_out);
+        
+        // Cuda memcpy bandwidth
+        bandwidthCudaMemcpy(mem_size, d_in, d_out);
+        
+        // run the single pass scan 
+        spScanInc<Add<int>>(B, N, h_in, d_in, d_out, kernel, chunk, 1);
+
     }
-
-    const uint8_t kernel = atoi(argv[3]);
-    printf("N=%d, B=%d, Kernel Version=%d\n\n", N, B, kernel);
-
-    const size_t mem_size = N*sizeof(int);
-    int* h_in    = (int*) malloc(mem_size);
-    int* d_in;
-    int* d_out;
-    cudaMalloc((void**)&d_in ,   mem_size);
-    cudaMalloc((void**)&d_out,   mem_size);
-
-    initArray(h_in, N, 13);
-    cudaMemcpy(d_in, h_in, mem_size, cudaMemcpyHostToDevice);
-
-    // computing a "realistic/achievable" bandwidth figure
-    bandwidthMemcpy(B, N, d_in, d_out);
-    
-    // Cuda memcpy bandwidth
-    bandwidthCudaMemcpy(N, d_in, d_out);
-    
-    // run the single pass scan 
-    spScanInc<Add<int>>(B, N, h_in, d_in, d_out, kernel);
 
     // cleanup memory
     free(h_in);
     cudaFree(d_in );
     cudaFree(d_out);
+
 }

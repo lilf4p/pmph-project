@@ -14,8 +14,6 @@
 #define lgWARP      5
 #define WARP        (1<<lgWARP)
 
-#define CHUNK_VALUE 15
-
 //#define WORKGROUP_SIZE      128
 //#define MAX_WORKGROUP_SIZE  1024
 
@@ -67,11 +65,12 @@ void initHwd() {
     MAX_SHMEM = prop.sharedMemPerBlock;
 
     if (DEBUG_INFO) {
+        printf("==Hwd Info==")
         printf("Device name: %s\n", prop.name);
         printf("Number of hardware threads: %d\n", MAX_HWDTH);
         printf("Max block size: %d\n", MAX_BLOCK);
         printf("Shared memory size: %d\n", MAX_SHMEM);
-        puts("====");
+        printf("==========\n");
     }
 }
 
@@ -138,6 +137,11 @@ void log2UB(uint32_t n, uint32_t* ub, uint32_t* lg) {
     }
     *ub = m;
     *lg = r;
+}
+
+int arrayLength (const uint32_t * array) {
+    if (array != NULL) return sizeof(array) / sizeof(array[0]);
+    else return 0;
 }
 
 #endif // UTILS

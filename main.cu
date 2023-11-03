@@ -40,7 +40,7 @@ int bandwidthMemcpy( const uint32_t B     // desired CUDA block size ( <= 1024, 
     }
  
     gpuAssert( cudaPeekAtLastError() );
-    return 0;
+    return gigaBytesPerSec;
 }
 
 // Measure bandwith of Cuda Memcpy device to device
@@ -70,7 +70,7 @@ int bandwidthCudaMemcpy( const size_t   N     // length of the input array
     }
  
     gpuAssert( cudaPeekAtLastError() );
-    return 0;
+    return gigaBytesPerSec;
 }
 
 // Function that benchmark and validate the single pass scan 
@@ -112,7 +112,7 @@ int spScanInc( uint32_t B     // desired CUDA block size ( <= 1024, multiple of 
     cudaMalloc((void**)&flags, num_blocks*sizeof( uint8_t ));
     cudaMalloc((void**)&dyn_block_id, sizeof( uint32_t ));
 
-    // ------- 10 dry run to exercise d_tmp allocation ------- //
+    // ------- 10 dry run to exercise allocation ------- //
     for (int i=0; i<10; i++) {
         cudaMemset(flags, INC, num_blocks * sizeof(uint8_t));
         cudaMemset(dyn_block_id, 0, sizeof(uint32_t));
@@ -277,7 +277,7 @@ int main (int argc, char * argv[]) {
         // Try different configuration
         uint32_t kernel_versions[] = {2,3};
         uint32_t n_sizes[] = {1024, 221184, 1000000, 10000000, 100003565}; 
-        uint32_t block_sizes[] = {128,256,512,1024};
+        uint32_t block_sizes[] = {64,128,256,512,1024};
         //const uint32_t chunk_values[] = {1,2,6,10,12,14}; // Do this manually
         
         int num_ker = sizeof(kernel_versions)/sizeof(kernel_versions[0]);
@@ -291,6 +291,12 @@ int main (int argc, char * argv[]) {
         results.open("benchmarks-sps.csv");
         results << "kernel,input,block,chunk,bandwidth\n";
 
+        naive_memcpy_res.open("naive-memcpy.csv");
+        naive_memcpy_res << "input,block,bandwidth\n";
+
+        cuda_memcpy_res.open("cuda-memcpy.csv");
+        cuda_memcpy_res << "input,bandwidth\n";
+
         for (int kernel = 0; kernel < num_ker; kernel++) {
             for (int n = 0; n < num_n; n++) {
                 for (int block_size = 0; block_size < num_block; block_size++) {
@@ -298,6 +304,8 @@ int main (int argc, char * argv[]) {
                         
                         // write config of first run
                         results << kernel_versions[kernel] << "," << n_sizes[n] << "," << block_sizes[block_size] << "," << std::to_string(CHUNK) << ",";
+                        naive_memcpy_res << n_sizes[n] << "," << block_sizes[block_size] << ",";
+                        cuda_memcpy_res << n_sizes[n] << ",";
 
                         count++;
                         printf("======== Bench Run %d =======\n", count);
@@ -316,8 +324,16 @@ int main (int argc, char * argv[]) {
                         // run the single pass scan 
                         double gigaBytesPerSec = spScanInc<Add<int>, CHUNK>(block_sizes[block_size], n_sizes[n], h_in, d_in, d_out, kernel_versions[kernel], 0);
 
-                        // write result
+                        // computing a "realistic/achievable" bandwidth figure
+                        double gbN = bandwidthMemcpy(B, N, d_in, d_out);
+        
+                        // Cuda memcpy bandwidth
+                        double gbC = bandwidthCudaMemcpy(mem_size, d_in, d_out);
+
+                        // write results
                         results << gigaBytesPerSec << "\n";
+                        naive_memcpy_res << gbN << "\n";
+                        cuda_memcpy_res << gbC << "\n";
 
                         printf("==================\n");
 

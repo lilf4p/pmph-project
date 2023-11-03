@@ -77,12 +77,12 @@ int bandwidthCudaMemcpy( const size_t   N     // length of the input array
 // Return the gigaBytesPerSec of the sps 
 template<class OP>
 int spScanInc( const uint32_t B     // desired CUDA block size ( <= 1024, multiple of 32)
-                   , const size_t   N     // length of the input array
+                   , const uint32_t N     // length of the input array
                    , int* h_in            // host input    of size: N * sizeof(int)
                    , int* d_in            // device input  of size: N * sizeof(int)
                    , int* d_out           // device result of size: N * sizeof(int)
-                   , uint8_t kernel_version    // scan kernel version
-                   , uint8_t validate     
+                   , uint32_t kernel_version    // scan kernel version
+                   , uint32_t validate     
                    , const uint32_t chunk 
 ) {
 
@@ -285,24 +285,24 @@ int main (int argc, char * argv[]) {
                     for (int chunk = 0; chunk < arrayLength(chunk_values); chunk++) {
                         
                         // write config of first run
-                        results << kernel << "," << n << "," << block_size << "," << chunk << ",";
+                        results << kernel_versions[kernel] << "," << n_sizes[n] << "," << block_sizes[block_size] << "," << chunk_values[chunk] << ",";
 
                         count++;
                         printf("======== Bench Run %d =======\n", count);
-                        printf("Configuration: Kernel=%d, N=%d, B=%d, CHUNK=%d\n", kernel, n, block_size, chunk);
-                        if (kernel == 3) printf("Latest Version of the SPScan Kernel is running...\n\n");
+                        printf("Configuration: Kernel=%d, N=%d, B=%d, CHUNK=%d\n", kernel_versions[kernel], n_sizes[n], block_sizes[block_size], chunk_values[chunk]);
+                        if (kernel_versions[kernel] == 3) printf("Latest Version of the SPScan Kernel is running...\n\n");
                         else printf("An older version of the SPScan Kernel is running. For the best performance run %s <array-length> <block-size> 3\n\n", argv[0]);
 
                         // run with current config 
-                        const size_t mem_size = n*sizeof(int);
+                        const size_t mem_size = n_sizes[n]*sizeof(int);
                         h_in = (int*) malloc(mem_size);
                         cudaMalloc((void**)&d_in ,   mem_size);
                         cudaMalloc((void**)&d_out,   mem_size);
 
-                        initArray(h_in, n, 13);
+                        initArray(h_in, n_sizes[n], 13);
         
                         // run the single pass scan 
-                        double gigaBytesPerSec = spScanInc<Add<int>>(block_size, n, h_in, d_in, d_out, kernel, chunk, 0);
+                        double gigaBytesPerSec = spScanInc<Add<int>>(block_sizes[block_size], n_sizes[n], h_in, d_in, d_out, kernel_versions[kernel], chunk_values[chunk], 0);
 
                         // write result
                         results << gigaBytesPerSec << "\n";

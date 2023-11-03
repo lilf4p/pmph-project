@@ -96,6 +96,11 @@ int spScanInc( uint32_t B     // desired CUDA block size ( <= 1024, multiple of 
     const uint32_t shared_mem_size = B * sizeof(typename OP::ElTp) * CHUNK;
     //printf("elems_per_block=%d, CHUNK=%d, num_blocks=%d, shmem_size=%d\n", elems_per_block, CHUNK, num_blocks, shared_mem_size);
 
+    if (shared_mem_size>=MAX_SHMEM) {
+        printf("Max Shared Memory Limit! Skip this run...\n");
+        return -1;
+    }
+
     // mallocs 
     typename OP::ElTp* aggregates;
     typename OP::ElTp* prefixes;

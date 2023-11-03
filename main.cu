@@ -285,7 +285,7 @@ int main (int argc, char * argv[]) {
                     for (int c = 0; c < arrayLength(chunk_values); c++) {
                         
                         // write config of first run
-                        results << kernel_versions[kernel] << "," << n_sizes[n] << "," << block_sizes[block_size] << "," << chunk_values[chunk] << ",";
+                        results << kernel_versions[kernel] << "," << n_sizes[n] << "," << block_sizes[block_size] << "," << chunk_values[c] << ",";
 
                         count++;
                         printf("======== Bench Run %d =======\n", count);
@@ -325,7 +325,7 @@ int main (int argc, char * argv[]) {
         }
 
         // Info Current Run
-        printf("N=%d, B=%d, Kernel Version=%d\n", N, B, kernel);
+        printf("N=%d, B=%d, Kernel Version=%d\n", N, B, KERNEL);
         if (kernel == 3) printf("Latest Version of the SPScan Kernel is running...\n\n");
         else printf("An older version of the SPScan Kernel is running. For the best performance run %s <array-length> <block-size> 3\n\n", argv[0]);
 
@@ -344,7 +344,7 @@ int main (int argc, char * argv[]) {
         bandwidthCudaMemcpy(mem_size, d_in, d_out);
         
         // run the single pass scan 
-        spScanInc<Add<int>>(B, N, h_in, d_in, d_out, Kernel, CHUNK, 1);
+        spScanInc<Add<int>>(B, N, h_in, d_in, d_out, KERNEL, CHUNK, 1);
 
     }
 

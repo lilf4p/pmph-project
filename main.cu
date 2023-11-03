@@ -258,8 +258,8 @@ int main (int argc, char * argv[]) {
     const uint8_t BENCHMARK = atoi(argv[1]);
     const uint32_t N = atoi(argv[2]);
     const uint32_t B = atoi(argv[3]);
-    const uint8_t kernel = atoi(argv[4]);
-    const uint32_t chunk = 12;
+    const uint8_t KERNEL = atoi(argv[4]);
+    const uint32_t CHUNK = 12;
 
     int* h_in;
     int* d_in;
@@ -282,7 +282,7 @@ int main (int argc, char * argv[]) {
         for (int kernel = 0; kernel < arrayLength(kernel_versions); kernel++) {
             for (int n = 0; n < arrayLength(n_sizes); n++) {
                 for (int block_size = 0; block_size < arrayLength(block_sizes); block_size++) {
-                    for (int chunk = 0; chunk < arrayLength(chunk_values); chunk++) {
+                    for (int c = 0; c < arrayLength(chunk_values); c++) {
                         
                         // write config of first run
                         results << kernel_versions[kernel] << "," << n_sizes[n] << "," << block_sizes[block_size] << "," << chunk_values[chunk] << ",";
@@ -302,7 +302,7 @@ int main (int argc, char * argv[]) {
                         initArray(h_in, n_sizes[n], 13);
         
                         // run the single pass scan 
-                        double gigaBytesPerSec = spScanInc<Add<int>>(block_sizes[block_size], n_sizes[n], h_in, d_in, d_out, kernel_versions[kernel], chunk_values[chunk], 0);
+                        double gigaBytesPerSec = spScanInc<Add<int>>(block_sizes[block_size], n_sizes[n], h_in, d_in, d_out, kernel_versions[kernel], chunk_values[c], 0);
 
                         // write result
                         results << gigaBytesPerSec << "\n";
@@ -353,7 +353,7 @@ int main (int argc, char * argv[]) {
         bandwidthCudaMemcpy(mem_size, d_in, d_out);
         
         // run the single pass scan 
-        spScanInc<Add<int>>(B, N, h_in, d_in, d_out, kernel, chunk, 1);
+        spScanInc<Add<int>>(B, N, h_in, d_in, d_out, Kernel, CHUNK, 1);
 
     }
 

@@ -35,7 +35,7 @@ int bandwidthMemcpy( const uint32_t B     // desired CUDA block size ( <= 1024, 
         timeval_subtract(&t_diff, &t_end, &t_start);
         elapsed = (t_diff.tv_sec*1e6+t_diff.tv_usec) / RUNS_GPU;
         gigaBytesPerSec = 2 * N * sizeof(int) * 1.0e-3f / elapsed;
-        printf("Naive Memcpy GPU Kernel runs in: %lu microsecs, GB/sec: %.2f\n"
+        //printf("Naive Memcpy GPU Kernel runs in: %lu microsecs, GB/sec: %.2f\n"
               , elapsed, gigaBytesPerSec);
     }
  
@@ -65,7 +65,7 @@ int bandwidthCudaMemcpy( const size_t   N     // length of the input array
         timeval_subtract(&t_diff, &t_end, &t_start);
         elapsed = (t_diff.tv_sec*1e6+t_diff.tv_usec) / RUNS_GPU;
         gigaBytesPerSec = 2 * N * sizeof(int) * 1.0e-3f / elapsed;
-        printf("Cuda Memcpy GPU Kernel runs in: %lu microsecs, GB/sec: %.2f\n\n"
+        //printf("Cuda Memcpy GPU Kernel runs in: %lu microsecs, GB/sec: %.2f\n\n"
               , elapsed, gigaBytesPerSec);
     }
  
@@ -185,7 +185,7 @@ int spScanInc( uint32_t B     // desired CUDA block size ( <= 1024, multiple of 
     timeval_subtract(&t_diff, &t_end, &t_start);
     elapsed = (t_diff.tv_sec*1e6+t_diff.tv_usec) / RUNS_GPU;
     double gigaBytesPerSec = N  * (2*sizeof(int) + sizeof(int)) * 1.0e-3f / elapsed;
-    printf("Single Pass Scan GPU Kernel runs in: %lu microsecs, GB/sec: %.2f\n"
+    //printf("Single Pass Scan GPU Kernel runs in: %lu microsecs, GB/sec: %.2f\n"
           , elapsed, gigaBytesPerSec);
 
     gpuAssert( cudaPeekAtLastError() );
@@ -308,10 +308,10 @@ int main (int argc, char * argv[]) {
                         cuda_memcpy_res << n_sizes[n] << ",";
 
                         count++;
-                        printf("======== Bench Run %d =======\n", count);
-                        printf("Configuration: KERNEL=%d, N=%d, B=%d, CHUNK=%d\n", kernel_versions[kernel], n_sizes[n], block_sizes[block_size], CHUNK);
-                        if (kernel_versions[kernel] == 3) printf("Latest Version of the SPScan Kernel is running...\n");
-                        else printf("An older version of the SPScan Kernel is running. For the best performance run %s <array-length> <block-size> 3\n", argv[0]);
+                        //printf("======== Bench Run %d =======\n", count);
+                        //printf("Configuration: KERNEL=%d, N=%d, B=%d, CHUNK=%d\n", kernel_versions[kernel], n_sizes[n], block_sizes[block_size], CHUNK);
+                        //if (kernel_versions[kernel] == 3) printf("Latest Version of the SPScan Kernel is running...\n");
+                        //else printf("An older version of the SPScan Kernel is running. For the best performance run %s <array-length> <block-size> 3\n", argv[0]);
 
                         // run with current config 
                         const size_t mem_size = n_sizes[n]*sizeof(int);
@@ -335,7 +335,7 @@ int main (int argc, char * argv[]) {
                         naive_memcpy_res << gbN << "\n";
                         cuda_memcpy_res << gbC << "\n";
 
-                        printf("==================\n");
+                        //printf("==================\n");
 
                     //}
                 }

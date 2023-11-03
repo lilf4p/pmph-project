@@ -305,7 +305,7 @@ int main (int argc, char * argv[]) {
                         //double gigaBytesPerSec = spScanInc<Add<int>>(block_sizes[block_size], n_sizes[n], h_in, d_in, d_out, kernel_versions[kernel], chunk_values[chunk], 0);
 
                         // write result
-                        results << gigaBytesPerSec << "\n";
+                        //results << gigaBytesPerSec << "\n";
 
                     }
                 }

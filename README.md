@@ -11,6 +11,12 @@ Each thread process several element Q. Block size B. One block process B*Q eleme
    3. block level scan
    4. each th select the corresp prefix in shared mem and adds it to each of its saved elems 
 
+
+Graphs: 
+   - BLOCK SIZES fixed input sizes (221184, 1000000, 100003565) and fixed chunk (15)
+   - CHUNK SIZES fixed input sizes (221184, 1000000, 100003565) and fixed block (512)
+
+
 ## Authors
 
 - Leonardo Stoppani ([@lilf4p](https://github.com/lilf4p))

@@ -6,6 +6,8 @@
 
 #define DEBUG_INFO  true
 
+#define CHUNK_VALUE 14
+
 // flag values
 #define INC 0 // nothing is available
 #define AGG 1 // aggregate is available

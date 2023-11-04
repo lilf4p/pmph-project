@@ -273,7 +273,7 @@ int main (int argc, char * argv[]) {
     uint32_t KERNEL = atoi(argv[4]);
     
     // Constant value 
-    const uint8_t CHUNK = 15;
+    const uint8_t CHUNK = CHUNK_VALUE;
 
     int* h_in;
     int* d_in;
@@ -297,14 +297,14 @@ int main (int argc, char * argv[]) {
         int count = 0;
 
         std::ofstream results;
-        results.open("bench-sps-" + std::to_string(CHUNK) + ".csv");
+        results.open("/benchmarks_latest/bench-sps-" + std::to_string(CHUNK) + ".csv");
         results << "kernel,input,block,chunk,bandwidth\n";
-        std::ofstream naive_memcpy_res;
-        naive_memcpy_res.open("bench-naiveMemcpy-" + std::to_string(CHUNK) + ".csv");
-        naive_memcpy_res << "input,block,bandwidth\n";
-        std::ofstream cuda_memcpy_res;
-        cuda_memcpy_res.open("bench-cudaMemcpy-" + std::to_string(CHUNK) + ".csv");
-        cuda_memcpy_res << "input,bandwidth\n";
+        //std::ofstream naive_memcpy_res;
+        //naive_memcpy_res.open("bench-naiveMemcpy-" + std::to_string(CHUNK) + ".csv");
+        //naive_memcpy_res << "input,block,bandwidth\n";
+        //std::ofstream cuda_memcpy_res;
+        //cuda_memcpy_res.open("bench-cudaMemcpy-" + std::to_string(CHUNK) + ".csv");
+        //cuda_memcpy_res << "input,bandwidth\n";
 
         for (int kernel = 0; kernel < num_ker; kernel++) {
             for (int n = 0; n < num_n; n++) {
@@ -313,8 +313,8 @@ int main (int argc, char * argv[]) {
                         
                         // write config of first run
                         results << kernel_versions[kernel] << "," << n_sizes[n] << "," << block_sizes[block_size] << "," << std::to_string(CHUNK) << ",";
-                        naive_memcpy_res << n_sizes[n] << "," << block_sizes[block_size] << ",";
-                        cuda_memcpy_res << n_sizes[n] << ",";
+                        //naive_memcpy_res << n_sizes[n] << "," << block_sizes[block_size] << ",";
+                        //cuda_memcpy_res << n_sizes[n] << ",";
 
                         count++;
                         //printf("======== Bench Run %d =======\n", count);
@@ -334,15 +334,15 @@ int main (int argc, char * argv[]) {
                         double gigaBytesPerSec = spScanInc<Add<int>, CHUNK>(block_sizes[block_size], n_sizes[n], h_in, d_in, d_out, kernel_versions[kernel], 0);
 
                         // computing a "realistic/achievable" bandwidth figure
-                        double gbN = bandwidthMemcpy(block_sizes[block_size], n_sizes[n], d_in, d_out);
+                        //double gbN = bandwidthMemcpy(block_sizes[block_size], n_sizes[n], d_in, d_out);
         
                         // Cuda memcpy bandwidth
-                        double gbC = bandwidthCudaMemcpy(mem_size, d_in, d_out);
+                        //double gbC = bandwidthCudaMemcpy(mem_size, d_in, d_out);
 
                         // write results
                         results << gigaBytesPerSec << "\n";
-                        naive_memcpy_res << gbN << "\n";
-                        cuda_memcpy_res << gbC << "\n";
+                        //naive_memcpy_res << gbN << "\n";
+                        //cuda_memcpy_res << gbC << "\n";
 
                         //printf("==================\n");
 

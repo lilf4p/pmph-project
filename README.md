@@ -1,20 +1,22 @@
 # Single Pass Scan in CUDA
-Project for the PMPH class from University of Copenhagen A.Y. 2023/2024
+Project for the Programming Massively Parallel Hardware class from University of Copenhagen A.Y. 2023/2024
 
-## Plan 
-Each thread process several element Q. Block size B. One block process B*Q elements 
-1. Collective read/write of B*Q elements from glb2sh2reg/reg2sh2glob (coalesced) -> compare performance with memcpy
-2. Insert dynamic BlockID
-3. Block-level scan -> check performance
-   1. each thread scans its Q elems in regs
-   2. writes to shared the last elems 
-   3. block level scan
-   4. each th select the corresp prefix in shared mem and adds it to each of its saved elems 
+## Usage 
+The program can be ran with Makefile using `make`. To run different experiments modify the Makefile with the desired parameters. The Makefile generate an executable called `sp-scan` that needs 4 arguments to run.
 
+```
+./sp-scan <benchmark> <array-length> <block-size> <kernel-version>
+```
 
-Graphs: 
-   - BLOCK SIZES fixed input sizes (221184, 1000000, 100003565) and fixed chunk (15)
-   - CHUNK SIZES fixed input sizes (221184, 1000000, 100003565) and fixed block (512)
+- `<benchmark>` set benchmark mode, next arguments wil not be considered.
+- `<array-length>` size of the input array to test
+- `<block-size>` size of one CUDA block
+- `<kernel-version>` kernel version from `kernels.cu` file to run:
+  - 0 -> Naive implementation that uses global memory (spScanKernelDepr)
+   - 1 -> Without loopback (spScanKernel)
+   - 2 -> Single thread Loopback (spLookbackScanKernel)
+   - 3 -> Warp Loopback (spWarpLookbackScanKernel)
+   - 4 -> Optimized Warp Loopback (spWarpLookbackScanKernelOpt)
 
 
 ## Authors

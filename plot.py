@@ -5,20 +5,16 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 
-def plot(metric:str = 'input'):
+def plot(metric:str = 'input', chunk:int=15, fixed:int = 512):
 
-    df = pd.read_csv('benchmarks/bench-sps-15.csv')
+    df = pd.read_csv('benchmarks/bench-sps-'+str(chunk)+'.csv')
 
     # remove the entry with bandwidth equal -1
     df = df[df['bandwidth'] != -1]
 
     # take only entry with block == 512
-    if metric == 'input': df = df[df['block'] == 512]
-    elif metric == 'block': df = df[df['input'] == 100003565]
-
-    # take the first value of row chunk 
-    chunk = df['chunk'].tolist()[0]
-
+    if metric == 'input': df = df[df['block'] == fixed]
+    elif metric == 'block': df = df[df['input'] == fixed]
 
     # take only columns input and bandwidth
     df = df[['kernel', metric, 'bandwidth']]
@@ -36,18 +32,25 @@ def plot(metric:str = 'input'):
     df_kernel3 = df[df['kernel'] == 3]
     df_kernel3.plot(ax = ax, x=metric, y='bandwidth', color='red')
 
-    if metric == 'input': plt.title('Bandwidth vs ' + metric + ' with chunk='+str(chunk)+' and block size=512')
-    elif metric == 'block': plt.title('Bandwidth vs ' + metric + ' with chunk='+str(chunk)+' and input=100003565')
+    # plot on same graph the kernel 4
+    df_kernel4 = df[df['kernel'] == 4]
+    df_kernel4.plot(ax = ax, x=metric, y='bandwidth', color='green')
 
-    plt.legend(['Kernel v2', 'Kernel v3'])
+    if metric == 'input': plt.title('Performances over ' + metric + ' sizes \n with chunk='+str(chunk)+' and block size='+str(fixed), fontsize=13, weight='bold', pad=15)
+    elif metric == 'block': plt.title('Performances over ' + metric + ' sizes \n with chunk='+str(chunk)+' and input size='+str(fixed), fontsize=13, weight='bold', pad=15)
+
+    plt.legend(['Thread', 'Warp', 'Optimized'], title='SPS Kernel', loc=4, fontsize='medium')
 
     # add axis name 
-    if metric == 'input': plt.xlabel('Input', weight = 'bold')
-    elif metric == 'block': plt.xlabel('Block', weight = 'bold')
+    if metric == 'input': plt.xlabel('Input sizes', weight = 'bold')
+    elif metric == 'block': plt.xlabel('Block sizes', weight = 'bold')
     plt.ylabel('Bandwidth (GB/s)', weight = 'bold')
+
+    plt.xticks(weight = 'bold')
+    plt.yticks(weight = 'bold')
 
     plt.show()
 
 if __name__ == '__main__':
-    plot('block')
-    plot('input')
+    plot('block',15, 100003565)
+    plot('input',15, 512)

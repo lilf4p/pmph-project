@@ -1,6 +1,4 @@
-# import csv file and plot it 
-# choose metric to plot -> then only one value for the other metrics can be plotted 
-# y axis will be always performance
+# utility to plot the graph for the report with matplotlib
 
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -37,7 +35,7 @@ def plot_blocks(input_size:int):
 
     # plot kernel 3
     df_kernel3 = df[df['kernel'] == 3]
-    df_kernel3.plot(ax = ax, x='block', y='bandwidth', marker='o')
+    df_kernel3.plot(ax = ax, x='block', y='bandwidth', alpha=0.7)
 
     # plot only if kernel is equal 2
     df_kernel2  = df[df['kernel'] == 2]
@@ -107,7 +105,7 @@ def plot_chunks(input_size:int):
     df_kernel3.plot(ax = ax, x='chunk', y='bandwidth', marker='o', label='LB Warp')
     
     df_kernel2  = df[df['kernel'] == 2]
-    df_kernel2.plot(ax = ax, x='chunk', y='bandwidth', marker='o', label='LB Thread')
+    df_kernel2.plot(ax = ax, x='chunk', y='bandwidth', marker='o', label='LB Single Thread')
 
     df_kernel1  = df[df['kernel'] == 1]
     df_kernel1.plot(ax = ax, x='chunk', y='bandwidth', marker='o', label='Without LB')
@@ -140,6 +138,6 @@ if __name__ == '__main__':
     plot_chunks(221184)
     plot_chunks(1000000)
     plot_chunks(100003565)
-    plot_blocks(221184)
-    plot_blocks(1000000)
-    plot_blocks(100003565)
+    #plot_blocks(221184)
+    #plot_blocks(1000000)
+    #plot_blocks(100003565)

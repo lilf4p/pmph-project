@@ -361,6 +361,7 @@ int main (int argc, char * argv[]) {
         }
         if (KERNEL > 4) {
             printf("Kernel version must be one between 0-3\n");
+            exit(1);
         }
 
         // Info Current Run

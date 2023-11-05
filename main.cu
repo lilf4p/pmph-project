@@ -297,7 +297,7 @@ int main (int argc, char * argv[]) {
         int count = 0;
 
         std::ofstream results;
-        results.open("benchmarks_sps_nolb/bench-sps-nolb-" + std::to_string(CHUNK) + ".csv");
+        results.open("benchmarks/bench-sps-nolb-" + std::to_string(CHUNK) + ".csv");
         results << "kernel,input,block,chunk,bandwidth\n";
         //std::ofstream naive_memcpy_res;
         //naive_memcpy_res.open("bench-naiveMemcpy-" + std::to_string(CHUNK) + ".csv");

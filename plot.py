@@ -37,7 +37,7 @@ def plot_blocks(input_size:int):
 
     # plot kernel 3
     df_kernel3 = df[df['kernel'] == 3]
-    df_kernel3.plot(ax = ax, x='block', y='bandwidth', alpha=0.7)
+    df_kernel3.plot(ax = ax, x='block', y='bandwidth', marker='o')
 
     # plot only if kernel is equal 2
     df_kernel2  = df[df['kernel'] == 2]
@@ -50,7 +50,7 @@ def plot_blocks(input_size:int):
     plt.legend(['Naive Memcpy', 'LB Optimized', 'LB Warp', 'LB Single Thread', 'Without LB'], fontsize='medium')
 
     # add axis name 
-    plt.xlabel('Block sizes', weight = 'bold')
+    plt.xlabel('Block size', weight = 'bold')
     plt.ylabel('Bandwidth (GB/s)', weight = 'bold')
 
     plt.xticks(weight = 'bold')
@@ -124,7 +124,7 @@ def plot_chunks(input_size:int):
     #plt.legend(['Naive Memcpy', 'LB Single Thread', 'LB Warp', 'LB Optimized'], fontsize='medium')
 
     # add axis name 
-    plt.xlabel('Chunk sizes', weight = 'bold')
+    plt.xlabel('Chunk size', weight = 'bold')
     plt.ylabel('Bandwidth (GB/s)', weight = 'bold')
 
     plt.xticks(weight = 'bold')
@@ -136,10 +136,10 @@ def plot_chunks(input_size:int):
     plt.savefig('plots/sps-chunk-512-'+str(input_size)+'.png')
 
 if __name__ == '__main__':
-    plot_blocks(221184)
-    #plot_chunks(221184)
-    #plot_chunks(1000000)
-    #plot_chunks(100003565)
     #plot_blocks(221184)
-    #plot_blocks(1000000)
-    #plot_blocks(100003565)
+    plot_chunks(221184)
+    plot_chunks(1000000)
+    plot_chunks(100003565)
+    plot_blocks(221184)
+    plot_blocks(1000000)
+    plot_blocks(100003565)

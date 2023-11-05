@@ -43,36 +43,6 @@ int bandwidthMemcpy( const uint32_t B     // desired CUDA block size ( <= 1024, 
     return gigaBytesPerSec;
 }
 
-// Measure bandwidth of Cuda Memcpy device to device
-int bandwidthCudaMemcpy( const size_t   N     // length of the input array
-                   , int* d_in            // device input  of length N
-                   , int* d_out           // device result of length N
-) {
-
-    double gigaBytesPerSec;
-    unsigned long int elapsed;
-    struct timeval t_start, t_end, t_diff;
-
-    {
-        gettimeofday(&t_start, NULL); 
-
-        for(int i=0; i<RUNS_GPU; i++) {
-            cudaMemcpy(d_out, d_in, N, cudaMemcpyDeviceToDevice); // it's right??? bandwidth above hardware limit :/
-        }
-        cudaDeviceSynchronize();
-
-        gettimeofday(&t_end, NULL);
-        timeval_subtract(&t_diff, &t_end, &t_start);
-        elapsed = (t_diff.tv_sec*1e6+t_diff.tv_usec) / RUNS_GPU;
-        gigaBytesPerSec = 2 * N * sizeof(int) * 1.0e-3f / elapsed;
-        //printf("Cuda Memcpy GPU Kernel runs in: %lu microsecs, GB/sec: %.2f\n\n"
-              //, elapsed, gigaBytesPerSec);
-    }
- 
-    gpuAssert( cudaPeekAtLastError() );
-    return gigaBytesPerSec;
-}
-
 // Function that benchmark and validate the single pass scan 
 // Return the gigaBytesPerSec of the sps 
 template<class OP, uint8_t CHUNK>
@@ -326,9 +296,6 @@ int main (int argc, char * argv[]) {
 
                         // computing a "realistic/achievable" bandwidth figure
                         //double gbN = bandwidthMemcpy(block_sizes[block_size], n_sizes[n], d_in, d_out);
-        
-                        // Cuda memcpy bandwidth
-                        //double gbC = bandwidthCudaMemcpy(mem_size, d_in, d_out);
 
                         // write results
                         results << gigaBytesPerSec << "\n";

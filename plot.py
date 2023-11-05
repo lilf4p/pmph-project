@@ -29,21 +29,25 @@ def plot_blocks(input_size:int):
     plt.style.use('ggplot')
 
     # plot on same graph the baseline with dotted line light gray
-    ax = df_baseline.plot(x='block', y='bandwidth', linestyle='--', color='gray')
+    ax = df_baseline.plot(x='block', y='bandwidth', linestyle='--', color='darkgray')
+
+    # plot the kernel 4
+    df_kernel4 = df[df['kernel'] == 4]
+    df_kernel4.plot(ax = ax, x='block', y='bandwidth', marker='o')
+
+    # plot kernel 3
+    df_kernel3 = df[df['kernel'] == 3]
+    df_kernel3.plot(ax = ax, x='block', y='bandwidth', alpha=0.7)
 
     # plot only if kernel is equal 2
     df_kernel2  = df[df['kernel'] == 2]
-    df_kernel2.plot(ax = ax, x='block', y='bandwidth', color='blue', marker='o')
+    df_kernel2.plot(ax = ax, x='block', y='bandwidth', marker='o')
+    
+    # plot only if kernel is equal 2
+    df_kernel1  = df[df['kernel'] == 1]
+    df_kernel1.plot(ax = ax, x='block', y='bandwidth', marker='o')
 
-    # plot on the same graph of kernel 2
-    df_kernel3 = df[df['kernel'] == 3]
-    df_kernel3.plot(ax = ax, x='block', y='bandwidth', color='red', marker='o')
-
-    # plot on same graph the kernel 4
-    df_kernel4 = df[df['kernel'] == 4]
-    df_kernel4.plot(ax = ax, x='block', y='bandwidth', color='green', alpha=0.7)
-
-    plt.legend(['Naive Memcpy', 'LB Single Thread', 'LB Warp', 'LB Optimized'], fontsize='medium')
+    plt.legend(['Naive Memcpy', 'LB Optimized', 'LB Warp', 'LB Single Thread', 'Without LB'], fontsize='medium')
 
     # add axis name 
     plt.xlabel('Block sizes', weight = 'bold')
@@ -96,21 +100,19 @@ def plot_chunks(input_size:int):
     baseline_value = df_baseline['bandwidth'].item()
     print(baseline_value)
     
-    # plot on same graph the baseline with dotted line light gray
-    #ax = df_baseline.plot(x='block', y='bandwidth', linestyle='--', color='gray')
-    # plot only if kernel is equal 2
-    df_kernel1  = df[df['kernel'] == 1]
-    ax = df_kernel1.plot(x='chunk', y='bandwidth', marker='o', label='Without LB')
-    df_kernel2  = df[df['kernel'] == 2]
-    df_kernel2.plot(ax = ax, x='chunk', y='bandwidth', marker='o', label='LB Thread')
-    # plot on the same graph of kernel 2
+    df_kernel4 = df[df['kernel'] == 4]
+    ax = df_kernel4.plot(x='chunk', y='bandwidth',marker='o', label='LB Optimized')
+
     df_kernel3 = df[df['kernel'] == 3]
     df_kernel3.plot(ax = ax, x='chunk', y='bandwidth', marker='o', label='LB Warp')
-    # plot on same graph the kernel 4
-    df_kernel4 = df[df['kernel'] == 4]
-    df_kernel4.plot(ax = ax, x='chunk', y='bandwidth',marker='o', label='LB Optimized')
+    
+    df_kernel2  = df[df['kernel'] == 2]
+    df_kernel2.plot(ax = ax, x='chunk', y='bandwidth', marker='o', label='LB Thread')
 
-    plt.axhline(y=baseline_value, color='gray', linestyle='--', label='Naive Memcpy')
+    df_kernel1  = df[df['kernel'] == 1]
+    df_kernel1.plot(ax = ax, x='chunk', y='bandwidth', marker='o', label='Without LB')
+
+    plt.axhline(y=baseline_value, color='darkgray', linestyle='--', label='Naive Memcpy')
 
     # change legend order, so that the first one is the baseline
     handles, labels = ax.get_legend_handles_labels()
@@ -134,10 +136,10 @@ def plot_chunks(input_size:int):
     plt.savefig('plots/sps-chunk-512-'+str(input_size)+'.png')
 
 if __name__ == '__main__':
-    #plot_blocks(221184)
-    plot_chunks(221184)
-    plot_chunks(1000000)
-    plot_chunks(100003565)
     plot_blocks(221184)
-    plot_blocks(1000000)
-    plot_blocks(100003565)
+    #plot_chunks(221184)
+    #plot_chunks(1000000)
+    #plot_chunks(100003565)
+    #plot_blocks(221184)
+    #plot_blocks(1000000)
+    #plot_blocks(100003565)

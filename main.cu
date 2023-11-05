@@ -284,7 +284,7 @@ int main (int argc, char * argv[]) {
         printf("==== Benchmark ====\n");
         
         // Try different configuration
-        uint32_t kernel_versions[] = {2,3,4};
+        uint32_t kernel_versions[] = {1};
         uint32_t n_sizes[] = {1024, 221184, 1000000, 10000000, 100003565}; 
         uint32_t block_sizes[] = {64,128,256,512,1024};
         //const uint32_t chunk_values[] = {1,2,6,10,12,14}; // Do this manually
@@ -297,7 +297,7 @@ int main (int argc, char * argv[]) {
         int count = 0;
 
         std::ofstream results;
-        results.open("benchmarks_latest/bench-sps-latest-" + std::to_string(CHUNK) + ".csv");
+        results.open("benchmarks_sps_nolb/bench-sps-nolb-" + std::to_string(CHUNK) + ".csv");
         results << "kernel,input,block,chunk,bandwidth\n";
         //std::ofstream naive_memcpy_res;
         //naive_memcpy_res.open("bench-naiveMemcpy-" + std::to_string(CHUNK) + ".csv");

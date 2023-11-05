@@ -13,7 +13,7 @@ $(SP_SCAN): utils.cu kernels.cu main.cu
 	$(COMPILER) $(OPT_FLAGS) -o $(SP_SCAN).out main.cu
 
 run: $(SP_SCAN)
-	./$(SP_SCAN).out 0 100003565 512 3
+	./$(SP_SCAN).out 1 100003565 512 3
 	
 clean:
 	rm -f $(SP_SCAN)

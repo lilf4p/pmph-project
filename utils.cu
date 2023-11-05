@@ -67,7 +67,7 @@ void initHwd() {
     MAX_SHMEM = prop.sharedMemPerBlock;
 
     if (DEBUG_INFO) {
-        printf("==Hwd Info==");
+        printf("==Hwd Info==\n");
         printf("Device name: %s\n", prop.name);
         printf("Number of hardware threads: %d\n", MAX_HWDTH);
         printf("Max block size: %d\n", MAX_BLOCK);

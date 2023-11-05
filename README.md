@@ -12,7 +12,6 @@ The program can be ran with Makefile using `make`. To run different experiments 
 - `<array-length>` size of the input array to test
 - `<block-size>` size of one CUDA block
 - `<kernel-version>` kernel version from `kernels.cu` file to run:
-  - 0 -> Naive implementation that uses global memory (spScanKernelDepr)
    - 1 -> Without loopback (spScanKernel)
    - 2 -> Single thread Loopback (spLookbackScanKernel)
    - 3 -> Warp Loopback (spWarpLookbackScanKernel)

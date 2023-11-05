@@ -119,9 +119,6 @@ int spScanInc( uint32_t B     // desired CUDA block size ( <= 1024, multiple of 
         // choose which version of the kernel to run
         switch (kernel_version)
         {
-        case 0:
-            spScanKernelDepr<OP, CHUNK><<<num_blocks, B, shared_mem_size>>>(d_out, d_in, aggregates, prefixes, flags, dyn_block_id, N);
-            break;
         case 1:
             spScanKernel<OP, CHUNK><<<num_blocks, B, shared_mem_size>>>(d_out, d_in, aggregates, prefixes, flags, dyn_block_id, N);
             break;
@@ -137,7 +134,6 @@ int spScanInc( uint32_t B     // desired CUDA block size ( <= 1024, multiple of 
         default:
             printf("Kernel Version must be a value between 0-4\n");
             printf("<kernel-version>:\n"
-            "    - 0: Naive implementation that uses global memory (spScanKernelDepr)\n"
             "    - 1: Without loopback (spScanKernel)\n"
             "    - 2: Single thread Loopback (spLookbackScanKernel)\n"
             "    - 3: Warp Loopback (spWarpLookbackScanKernel)\n"
@@ -161,9 +157,6 @@ int spScanInc( uint32_t B     // desired CUDA block size ( <= 1024, multiple of 
         // choose which version of the kernel to run
         switch (kernel_version)
         {
-        case 0:
-            spScanKernelDepr<OP, CHUNK><<<num_blocks, B, shared_mem_size>>>(d_out, d_in, aggregates, prefixes, flags, dyn_block_id, N);
-            break;
         case 1:
             spScanKernel<OP, CHUNK><<<num_blocks, B, shared_mem_size>>>(d_out, d_in, aggregates, prefixes, flags, dyn_block_id, N);
             break;
@@ -179,7 +172,6 @@ int spScanInc( uint32_t B     // desired CUDA block size ( <= 1024, multiple of 
         default:
             printf("Kernel Version must be a value between 0-4\n");
             printf("<kernel-version>:\n"
-            "    - 0: Naive implementation that uses global memory (spScanKernelDepr)\n"
             "    - 1: Without loopback (spScanKernel)\n"
             "    - 2: Single thread Loopback (spLookbackScanKernel)\n"
             "    - 3: Warp Loopback (spWarpLookbackScanKernel)\n"
@@ -193,8 +185,8 @@ int spScanInc( uint32_t B     // desired CUDA block size ( <= 1024, multiple of 
     timeval_subtract(&t_diff, &t_end, &t_start);
     elapsed = (t_diff.tv_sec*1e6+t_diff.tv_usec) / RUNS_GPU;
     double gigaBytesPerSec = N  * (2*sizeof(int) + sizeof(int)) * 1.0e-3f / elapsed;
-    //printf("Single Pass Scan GPU Kernel runs in: %lu microsecs, GB/sec: %.2f\n"
-          //, elapsed, gigaBytesPerSec);
+    printf("Single Pass Scan GPU Kernel runs in: %lu microsecs, GB/sec: %.2f\n"
+          , elapsed, gigaBytesPerSec);
 
     gpuAssert( cudaPeekAtLastError() );
     //-------------------------------------//
@@ -256,7 +248,6 @@ int main (int argc, char * argv[]) {
     if (argc != 5) {
         printf("Usage: %s <benchmark> <array-length> <block-size> <kernel-version>\n", argv[0]);
         printf("<kernel-version>:\n"
-        "    - 0: Naive implementation that uses global memory (spScanKernelDepr)\n"
         "    - 1: Without loopback (spScanKernel)\n"
         "    - 2: Single thread Loopback (spLookbackScanKernel)\n"
         "    - 3: Warp Loopback (spWarpLookbackScanKernel)\n"

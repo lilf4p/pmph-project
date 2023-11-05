@@ -330,7 +330,7 @@ int main (int argc, char * argv[]) {
 
                         initArray(h_in, n_sizes[n], 13);
         
-                        // run the single pass scan 
+                        // run the single pass scan without validation 
                         double gigaBytesPerSec = spScanInc<Add<int>, CHUNK>(block_sizes[block_size], n_sizes[n], h_in, d_in, d_out, kernel_versions[kernel], 0);
 
                         // computing a "realistic/achievable" bandwidth figure
@@ -382,7 +382,7 @@ int main (int argc, char * argv[]) {
         // Cuda memcpy bandwidth
         bandwidthCudaMemcpy(mem_size, d_in, d_out);
         
-        // run the single pass scan 
+        // run the single pass scan with validation
         spScanInc<Add<int>, CHUNK>(B, N, h_in, d_in, d_out, KERNEL, 1);
 
     }

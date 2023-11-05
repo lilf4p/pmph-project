@@ -99,21 +99,23 @@ def plot_chunks(input_size:int):
     # plot on same graph the baseline with dotted line light gray
     #ax = df_baseline.plot(x='block', y='bandwidth', linestyle='--', color='gray')
     # plot only if kernel is equal 2
+    df_kernel1  = df[df['kernel'] == 1]
+    ax = df_kernel1.plot(x='chunk', y='bandwidth', marker='o', label='Without LB')
     df_kernel2  = df[df['kernel'] == 2]
-    ax = df_kernel2.plot(x='chunk', y='bandwidth', color='blue', marker='o', label='LB Thread')
+    df_kernel2.plot(ax = ax, x='chunk', y='bandwidth', marker='o', label='LB Thread')
     # plot on the same graph of kernel 2
     df_kernel3 = df[df['kernel'] == 3]
-    df_kernel3.plot(ax = ax, x='chunk', y='bandwidth', color='red', marker='o', label='LB Warp')
+    df_kernel3.plot(ax = ax, x='chunk', y='bandwidth', marker='o', label='LB Warp')
     # plot on same graph the kernel 4
     df_kernel4 = df[df['kernel'] == 4]
-    df_kernel4.plot(ax = ax, x='chunk', y='bandwidth', color='green',marker='o', label='LB Optimized')
+    df_kernel4.plot(ax = ax, x='chunk', y='bandwidth',marker='o', label='LB Optimized')
 
     plt.axhline(y=baseline_value, color='gray', linestyle='--', label='Naive Memcpy')
 
     # change legend order, so that the first one is the baseline
     handles, labels = ax.get_legend_handles_labels()
-    handles = [handles[3], handles[0], handles[1], handles[2]]
-    labels = [labels[3], labels[0], labels[1], labels[2]]
+    handles = [handles[4], handles[0], handles[1], handles[2], handles[3]]
+    labels = [labels[4], labels[0], labels[1], labels[2], labels[3]]
     ax.legend(handles, labels, fontsize='medium')
 
 
@@ -131,8 +133,11 @@ def plot_chunks(input_size:int):
 
     plt.savefig('plots/sps-chunk-512-'+str(input_size)+'.png')
 
-    plt.show()
-
 if __name__ == '__main__':
     #plot_blocks(221184)
+    plot_chunks(221184)
+    plot_chunks(1000000)
     plot_chunks(100003565)
+    plot_blocks(221184)
+    plot_blocks(1000000)
+    plot_blocks(100003565)

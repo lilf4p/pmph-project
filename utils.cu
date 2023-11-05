@@ -6,7 +6,7 @@
 
 #define DEBUG_INFO  true
 
-#define CHUNK_VALUE 1
+#define CHUNK_VALUE 15
 
 // flag values
 #define INC 0 // nothing is available

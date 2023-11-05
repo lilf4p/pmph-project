@@ -35,8 +35,8 @@ int bandwidthMemcpy( const uint32_t B     // desired CUDA block size ( <= 1024, 
         timeval_subtract(&t_diff, &t_end, &t_start);
         elapsed = (t_diff.tv_sec*1e6+t_diff.tv_usec) / RUNS_GPU;
         gigaBytesPerSec = 2 * N * sizeof(int) * 1.0e-3f / elapsed;
-        //printf("Naive Memcpy GPU Kernel runs in: %lu microsecs, GB/sec: %.2f\n"
-              //, elapsed, gigaBytesPerSec);
+        printf("Naive Memcpy GPU Kernel runs in: %lu microsecs, GB/sec: %.2f\n"
+              , elapsed, gigaBytesPerSec);
     }
  
     gpuAssert( cudaPeekAtLastError() );
@@ -379,9 +379,6 @@ int main (int argc, char * argv[]) {
 
         // computing a "realistic/achievable" bandwidth figure
         bandwidthMemcpy(B, N, d_in, d_out);
-        
-        // Cuda memcpy bandwidth
-        bandwidthCudaMemcpy(mem_size, d_in, d_out);
         
         // run the single pass scan with validation
         spScanInc<Add<int>, CHUNK>(B, N, h_in, d_in, d_out, KERNEL, 1);
